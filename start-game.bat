@@ -1,12 +1,11 @@
 @echo off
-REM Jonah Game launcher. English-only on purpose: Chinese characters in a .bat
-REM get mangled by the console code page and break parsing.
+REM Jonah Game launcher. English-only (Chinese breaks .bat parsing on Windows).
 setlocal enableextensions
-title Jonah Game - launcher
+title Jonah Game
 cd /d "%~dp0"
 
 echo ============================================
-echo    Jonah Game (Yue-Na)  -  starting...
+echo    Jonah Game  -  starting...
 echo ============================================
 echo.
 
@@ -21,7 +20,7 @@ if errorlevel 1 (
 
 REM ---- first run: install packages ----
 if not exist "node_modules" (
-  echo [1/3] First run - installing packages (about 1-2 min, only once)...
+  echo  First run - installing packages, about 1-2 minutes, only once...
   call npm install
   if errorlevel 1 (
     echo.
@@ -29,16 +28,14 @@ if not exist "node_modules" (
     pause
     exit /b 1
   )
-) else (
-  echo [1/3] Packages already installed - skipping.
 )
 
-REM ---- find a free port (scan up from 5173; avoids ports taken by other apps) ----
+REM ---- find a free port (scan up from 5173) ----
 set /a PORT=5173
 set /a TRIES=0
 :findport
 netstat -ano | findstr "LISTENING" | findstr ":%PORT% " >nul 2>&1
-if %errorlevel% NEQ 0 goto gotport
+if errorlevel 1 goto gotport
 set /a PORT+=1
 set /a TRIES+=1
 if %TRIES% GEQ 50 (
@@ -50,24 +47,20 @@ goto findport
 :gotport
 
 set "URL=http://localhost:%PORT%/"
-echo [2/3] Starting game server on port %PORT% ...
 echo.
-echo    Game URL: %URL%
-echo    *** A separate black "server" window will open. Keep it open while playing;
-echo        close it to stop the game. ***
+echo  Game URL:  %URL%
+echo.
+echo  *** Keep THIS window open while playing. Close it to stop the game. ***
 echo.
 
-REM Start Vite on the chosen free port in its own window
-start "Jonah Game server :%PORT% (close to stop)" cmd /k "npm run dev -- --port %PORT% --strictPort --host"
+REM Open the browser a few seconds later (hidden helper), then run the server here.
+start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep 4; Start-Process '%URL%'"
 
-REM ---- wait until the server actually answers, then open the browser ----
-echo [3/3] Waiting for the server, then opening the browser...
-powershell -NoProfile -Command "for($i=0;$i -lt 150;$i++){ try{ $c=[Net.Sockets.TcpClient]::new(); $c.Connect('localhost',%PORT%); $c.Close(); exit 0 }catch{ Start-Sleep -Milliseconds 400 } }; exit 1"
-start "" "%URL%"
+echo  Starting server (browser opens automatically in a few seconds)...
+echo.
+call npm run dev -- --port %PORT% --strictPort --host
 
 echo.
-echo  Browser opened. If not, open this manually: %URL%
-echo  (You can close THIS window; the server runs in the other one.)
-echo.
-timeout /t 4 /nobreak >nul
+echo  Server stopped.
+pause
 exit /b 0
