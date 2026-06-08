@@ -1,0 +1,17 @@
+{
+  "name": "jonah-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "約拿闖關 — 聖經互動遊戲 (MVP)",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/bundle-static.mjs",
+    "icons": "node scripts/gen-icons.mjs",
+    "serve:dist": "node scripts/serve-static.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5",
+    "vite": "^6.0.7"
+  }
+}
