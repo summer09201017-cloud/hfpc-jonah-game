@@ -526,6 +526,7 @@ export class Game {
       moving: false,
       phase: 'intro', // intro / walk(往前走) / pray(禱告作答) / done
     }
+    this.player.reset()
     this.state = STATE.FISH
     this.ui.hidePauseButton()
     Audio.unlock()
@@ -537,27 +538,47 @@ export class Game {
   _fishStartWalk() {
     this.fish.phase = 'walk'
     this.fish.dist = 0
+    this.fish.moving = false
+    this.player.reset() // 回到地面、站立、不蹲
     this.ui.hide()
     this.ui.hidePauseButton()
     this.state = STATE.PLAYING
   }
 
-  // 走路段更新(只在 phase==='walk' 有效;走滿一小段就停下禱告)
+  // 走路段更新(phase==='walk'):→走、↑/輕點跳、↓/左側蹲;走到底跳起來碰蠟燭=禱告
   _fishStep(dt) {
     const f = this.fish
     if (!f || f.phase !== 'walk') return
-    this.input.consumeJump()
-    this.input.consumeTap()
+    const p = this.player
+    const wantJump = this.input.consumeJump() || this.input.consumeTap()
     this.input.consumePress()
     const half = this.input.viewW * 0.5
-    const forward = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
-    f.moving = forward
-    if (forward) f.dist += FISH.walkSpeed * dt
+    const walkHeld = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
+    const crouchHeld = this.input.down || (this.input.pointerDown && this.input.pointerX < half)
+    p.crouching = crouchHeld && p.onGround
+    if (wantJump && p.jump()) Audio.sfx('jump')
+    // 前進:站著走快、蹲著鑽慢
+    let speed = 0
+    if (p.crouching) speed = FISH.crouchSpeed
+    else if (walkHeld) speed = FISH.walkSpeed
+    f.moving = speed > 0
+    if (speed > 0) {
+      let nd = f.dist + speed * dt
+      const boneDist = FISH.segment * FISH.boneAt
+      // 站著(沒蹲)碰到骨頭就過不去,要蹲下才能鑽過
+      if (!p.crouching && f.dist < boneDist && nd >= boneDist) nd = boneDist - 4
+      f.dist = Math.min(FISH.segment, nd)
+    }
+    p.update(dt)
+    // 走到底、蠟燭就在頭頂:跳起來碰到 = 開始禱告
     if (f.dist >= FISH.segment) {
-      f.dist = FISH.segment
-      f.phase = 'pray'
-      this.state = STATE.FISH
-      this._showFishQuestion()
+      const cb = { x: PLAYER.x - 24, y: FISH.candleY - 24, w: 48, h: 48 }
+      if (aabb(p.hitbox(), cb)) {
+        f.phase = 'pray'
+        this.state = STATE.FISH
+        Audio.sfx('treasure', { value: 1 })
+        this._showFishQuestion()
+      }
     }
   }
 

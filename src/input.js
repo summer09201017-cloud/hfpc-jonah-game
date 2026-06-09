@@ -8,6 +8,7 @@ export class Input {
   constructor() {
     this.right = false // → / D 是否按住
     this.left = false // ← / A 是否按住
+    this.down = false // ↓ / S 是否按住(第三關蹲下)
     this.jumpQueued = false // 鍵盤跳躍(邊緣)
     this.pauseQueued = false // 暫停(邊緣;鍵盤或右上角熱區)
     this.muteQueued = false // 靜音切換(邊緣;M 鍵)
@@ -43,6 +44,11 @@ export class Input {
         case 'KeyA':
           this.left = true
           break
+        case 'ArrowDown':
+        case 'KeyS':
+          e.preventDefault()
+          this.down = true
+          break
         case 'KeyP':
         case 'Escape':
           e.preventDefault()
@@ -62,6 +68,10 @@ export class Input {
         case 'ArrowLeft':
         case 'KeyA':
           this.left = false
+          break
+        case 'ArrowDown':
+        case 'KeyS':
+          this.down = false
           break
       }
     })
@@ -112,7 +122,7 @@ export class Input {
 
     // 視窗失焦時清掉「按住」狀態,避免卡住一直走/跳
     window.addEventListener('blur', () => {
-      this.right = this.left = false
+      this.right = this.left = this.down = false
       this.pointerDown = false
     })
   }

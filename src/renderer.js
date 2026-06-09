@@ -352,21 +352,38 @@ export class Renderer {
       ctx.fill()
     }
 
-    // 前方的「禱告之光」:走路時從右邊接近;禱告時就在約拿身旁
-    const jx = 200
-    const lampX = f.phase === 'walk' ? jx + Math.max(0, FISH.segment - (f.dist || 0)) : jx
-    const lampY = footY - 74
-    const halo = ctx.createRadialGradient(lampX, lampY, 3, lampX, lampY, 64)
-    halo.addColorStop(0, 'rgba(255,224,150,0.7)')
+    const jx = PLAYER.x
+    const p = game.player
+
+    // 懸吊的骨頭(站著過不去,要蹲下鑽過);出現在這一段中間
+    const boneDist = FISH.segment * FISH.boneAt
+    const boneX = jx + (boneDist - (f.dist || 0))
+    if ((f.phase === 'walk' || f.phase === 'pray') && boneX > -50 && boneX < VIEW.W + 50) {
+      ctx.strokeStyle = 'rgba(235,225,210,0.45)'
+      ctx.lineWidth = 4
+      ctx.beginPath()
+      ctx.moveTo(boneX, 0)
+      ctx.lineTo(boneX, footY - 52)
+      ctx.stroke()
+      this._emoji('🦴', boneX, footY - 70, 48, 'middle')
+    }
+
+    // 禱告蠟燭:懸在空中;走到底時就在約拿頭頂——要跳起來碰到它才能禱告
+    const candleX = f.phase === 'walk' ? jx + Math.max(0, FISH.segment - (f.dist || 0)) : jx
+    const candleY = FISH.candleY
+    const halo = ctx.createRadialGradient(candleX, candleY, 3, candleX, candleY, 62)
+    halo.addColorStop(0, 'rgba(255,224,150,0.78)')
     halo.addColorStop(1, 'rgba(255,224,150,0)')
     ctx.fillStyle = halo
-    ctx.fillRect(lampX - 64, lampY - 64, 128, 128)
-    this._emoji('🕯️', lampX, lampY, 40, 'middle')
+    ctx.fillRect(candleX - 62, candleY - 62, 124, 124)
+    this._emoji('🕯️', candleX, candleY, 40, 'middle')
 
-    // 約拿:走路時邁步(面向右),禱告/站立時不擺動
-    const moving = f.phase === 'walk' && f.moving
-    this._prophet(jx, footY, moving ? scroll * 0.05 : 0, false, false)
-    if (f.phase === 'pray') this._emoji('🙏', jx + 4, footY - 86, 28, 'middle')
+    // 約拿:用 Player 的 y(跳躍)與蹲下姿勢
+    const py = p ? p.y : footY
+    const airborne = p ? !p.onGround : false
+    const crouching = p ? p.crouching : false
+    const moving = f.phase === 'walk' && f.moving && !airborne
+    this._prophet(jx, py, moving ? scroll * 0.05 : 0, airborne, false, crouching)
 
     // 頂端:已點亮的禱告之光(進度)
     for (let i = 0; i < total; i++) {
@@ -386,7 +403,11 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
     if (f.phase === 'walk') {
-      ctx.fillText('按住 → / 點住畫面右側,往前走向禱告之光', VIEW.W / 2, VIEW.H - 12)
+      ctx.fillText(
+        '→/右側 走　↑/空白/輕點 跳起來碰蠟燭　↓/左側 蹲下鑽過骨頭',
+        VIEW.W / 2,
+        VIEW.H - 12
+      )
     } else {
       ctx.fillText(`禱告之光  ${f.lit || 0} / ${total}`, VIEW.W / 2, VIEW.H - 12)
     }
@@ -394,7 +415,7 @@ export class Renderer {
 
   // 用 Canvas 直接畫一個「面向右、奔跑中的先知」。
   // phase = 步伐相位(弧度);airborne = 是否在跳躍中;faceLeft = 是否面向左(後退時)。
-  _prophet(x, footY, phase, airborne, faceLeft = false) {
+  _prophet(x, footY, phase, airborne, faceLeft = false, crouch = false) {
     const ctx = this.ctx
     const sw = Math.sin(phase) * 0.6 // 擺動幅度(弧度)
     const bob = airborne ? 0 : -Math.abs(Math.sin(phase)) * 2.5
@@ -460,6 +481,7 @@ export class Renderer {
     ctx.save()
     ctx.translate(x, footY + bob)
     if (faceLeft) ctx.scale(-1, 1) // 後退時水平翻轉,讓先知面向左
+    if (crouch) ctx.scale(1, 0.6) // 蹲下:整體往腳底壓低
 
     // 後側手腳(先畫,被身體蓋住,略透明做出前後層次)
     ctx.globalAlpha = 0.82
