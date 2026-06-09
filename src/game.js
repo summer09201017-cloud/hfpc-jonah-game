@@ -7,8 +7,9 @@ import { UI } from './ui.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { LEVEL1, LEVEL2 } from './scripture.js'
+import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
-const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose' }
+const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz' }
 const STEP = 1 / 60 // 固定時間步長,讓物理在任何更新率下都一致
 
 export class Game {
@@ -23,6 +24,7 @@ export class Game {
     this.state = STATE.TITLE
     this.level = 1 // 1=約帕港口(跑酷) / 2=暴風雨(平衡)
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
+    this.quiz = null // 進行中的聖經問答(null=沒有);{list,pos,correct,returnTo,single}
     this.last = 0
     this.acc = 0
     this._resetRun()
@@ -40,6 +42,7 @@ export class Game {
     this.ui.onPause(() => this.pause())
     this.ui.onResume(() => this.resume())
     this.ui.onMute(() => this.toggleMute())
+    this.ui.onQuizAction((act, ds) => this.handleQuizAction(act, ds)) // 聖經問答按鈕
     this.ui.setMuteIcon(Audio.muted)
     this.ui.showTitle(LEVEL1)
 
@@ -173,6 +176,17 @@ export class Game {
     this.player.update(dt)
     this.spawner.update(dt, this.speed, this.distance, RUN.goalDistance, this.mode === 'walk')
 
+    // 漫步模式:走近 NPC(碼頭長者)就觸發聖經問答——沒有時間壓力,適合停下來作答
+    if (this.mode === 'walk') {
+      for (const npc of this.spawner.npcs) {
+        if (!npc.done && Math.abs(npc.x - PLAYER.x) < 46) {
+          npc.done = true
+          this.startNpcQuiz(npc.qIndex)
+          return // 進入問答,本步到此為止
+        }
+      }
+    }
+
     // 撞到障礙(只有闖關模式會扣命;漫步模式障礙無害,沒有壓力)
     if (this.mode === 'run' && this.player.invuln <= 0) {
       const pb = this.player.hitbox()
@@ -301,6 +315,86 @@ export class Game {
     Audio.stopMusic()
     Audio.sfx('lose')
     this.ui.showLose(this.level === 2 ? LEVEL2 : LEVEL1)
+  }
+
+  // ---- 聖經問答 ----
+  // 卡片內所有 quiz-* 按鈕都走這裡
+  handleQuizAction(act, ds) {
+    if (act === 'quiz-start') this.startQuizPractice()
+    else if (act === 'quiz-choice') this.answerQuiz(Number(ds.choice))
+    else if (act === 'quiz-continue') this.afterQuizFeedback()
+    else if (act === 'quiz-restart') this.startQuizPractice()
+    else if (act === 'quiz-home') this.toTitle()
+  }
+
+  // 從標題進入的「練習」:隨機抽 5 題
+  startQuizPractice() {
+    this.quiz = { list: pickQuestions(5), pos: 0, correct: 0, returnTo: 'title', single: false }
+    this.state = STATE.QUIZ
+    this.ui.hidePauseButton()
+    Audio.unlock()
+    this._showCurrentQuestion()
+  }
+
+  // 漫步遇到 NPC 的單題(rawIndex 取餘數對應題庫,輪流出題)
+  startNpcQuiz(rawIndex) {
+    const n = QUESTIONS.length
+    const idx = ((rawIndex % n) + n) % n
+    this.quiz = { list: [idx], pos: 0, correct: 0, returnTo: 'walk', single: true }
+    this.state = STATE.QUIZ
+    this.ui.hidePauseButton()
+    this._showCurrentQuestion()
+  }
+
+  _showCurrentQuestion() {
+    const q = QUESTIONS[this.quiz.list[this.quiz.pos]]
+    this.ui.showQuiz(q, this.quiz.pos, this.quiz.list.length, this.quiz.single)
+  }
+
+  answerQuiz(choice) {
+    if (!this.quiz) return
+    const q = QUESTIONS[this.quiz.list[this.quiz.pos]]
+    const correct = choice === q.answer
+    if (correct) {
+      this.quiz.correct += 1
+      Audio.sfx('treasure', { value: 5 })
+    } else {
+      Audio.sfx('hit')
+    }
+    const last = this.quiz.pos === this.quiz.list.length - 1
+    const label = this.quiz.single ? '回去走走' : last ? '看結果' : '下一題'
+    this.ui.showQuizFeedback(q, choice, label)
+  }
+
+  afterQuizFeedback() {
+    if (!this.quiz) return
+    this.quiz.pos += 1
+    if (this.quiz.pos < this.quiz.list.length) {
+      this._showCurrentQuestion()
+    } else if (this.quiz.returnTo === 'walk') {
+      this._endQuizToWalk() // NPC 題答完,回到漫步繼續玩
+    } else {
+      this.ui.showQuizSummary(
+        this.quiz.correct,
+        this.quiz.list.length,
+        quizRemark(this.quiz.correct, this.quiz.list.length)
+      )
+    }
+  }
+
+  _endQuizToWalk() {
+    this.quiz = null
+    this.ui.hide()
+    this.ui.showPauseButton()
+    this.state = STATE.PLAYING
+  }
+
+  toTitle() {
+    this.quiz = null
+    this.level = 1
+    this.state = STATE.TITLE
+    Audio.stopMusic()
+    this.ui.showTitle(LEVEL1)
   }
 }
 

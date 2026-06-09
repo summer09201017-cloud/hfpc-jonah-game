@@ -111,6 +111,13 @@ export class Renderer {
       this._emoji(e.emoji, e.x + wob, GROUND_Y + 4, e.size)
     }
 
+    // NPC(漫步模式:碼頭長者,走近觸發聖經問答;頭上有 ❓/✅ 提示氣泡)
+    for (const n of game.spawner.npcs) {
+      this._emoji(n.emoji, n.x, GROUND_Y + 6, n.size)
+      const bob = Math.sin((dist + n.x) * 0.04) * 3
+      this._emoji(n.done ? '✅' : '❓', n.x, GROUND_Y - 66 + bob, 30, 'middle')
+    }
+
     // 往他施的船(接近終點時滑入)
     const shipX = game.shipPos(dist)
     if (shipX !== null) {

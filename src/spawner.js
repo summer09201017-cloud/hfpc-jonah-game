@@ -46,12 +46,16 @@ export class Spawner {
     this.obstacles = []
     this.treasures = []
     this.enemies = []
+    this.npcs = [] // 漫步模式才有:走近會觸發聖經問答的 NPC
     this.distSinceObstacle = 0
     this.nextObstacleGap = 520
     this.distSinceTreasure = 0
     this.nextTreasureGap = 820
     this.distSinceEnemy = 0
     this.nextEnemyGap = 1400
+    this.distSinceNpc = 0
+    this.nextNpcGap = 1500 // 第一個 NPC 較早出現,讓玩家很快遇到
+    this.npcCount = 0 // 累計第幾個 NPC(用來輪流出不同題)
   }
 
   update(dt, speed, distanceTraveled, goalDistance, enemiesOn = false) {
@@ -115,13 +119,34 @@ export class Spawner {
       }
     }
 
+    // ---- NPC(只在漫步模式;走近觸發聖經問答,沒有時間壓力)----
+    if (enemiesOn) {
+      this.distSinceNpc += dx
+      if (spawning && this.distSinceNpc >= this.nextNpcGap) {
+        this.distSinceNpc = 0
+        this.nextNpcGap = rand(2400, 3400)
+        this.npcs.push({
+          x: VIEW.W + 60,
+          w: 44,
+          h: 64,
+          size: 54,
+          emoji: '🧓', // 碼頭邊的長者,考考你約拿的故事
+          qIndex: this.npcCount, // 原始序號,由 game 取餘數對應題庫
+          done: false,
+        })
+        this.npcCount++
+      }
+    }
+
     // ---- 移動 + 移除出界 ----
     for (const o of this.obstacles) o.x -= dx
     for (const c of this.treasures) c.x -= dx
     // 敵人:除了世界捲動,還會自己向左爬(站著不動牠也會靠近)
     for (const e of this.enemies) e.x -= dx + e.crawl * dt
+    for (const n of this.npcs) n.x -= dx
     this.obstacles = this.obstacles.filter((o) => o.x > -80)
     this.treasures = this.treasures.filter((c) => c.x > -80 && !c.taken)
     this.enemies = this.enemies.filter((e) => e.x > -80 && !e.dead)
+    this.npcs = this.npcs.filter((n) => n.x > -80)
   }
 }

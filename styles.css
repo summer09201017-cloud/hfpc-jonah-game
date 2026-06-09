@@ -161,6 +161,24 @@ body {
   margin-top: 14px;
 }
 
+/* ---- 聖經問答 ---- */
+.qtext {
+  text-align: left;
+  font-size: 22px;
+  line-height: 1.5;
+}
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0 4px;
+}
+.choice {
+  width: 100%;
+  text-align: left;
+  font-size: 17px;
+}
+
 /* 右上角圓形圖示按鈕(暫停 / 靜音) */
 .icon-btn {
   position: absolute;

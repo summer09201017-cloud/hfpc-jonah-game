@@ -13,6 +13,7 @@ export class UI {
     this._pause = null
     this._mute = null
     this._storm = null
+    this._quizAction = null
 
     // 用事件委派處理卡片內的按鈕
     this.card.addEventListener('click', (e) => {
@@ -24,6 +25,8 @@ export class UI {
       else if (act === 'restart' && this._restart) this._restart()
       else if (act === 'resume' && this._resume) this._resume()
       else if (act === 'next' && this._next) this._next()
+      // 所有聖經問答相關按鈕(quiz-start / quiz-choice / quiz-continue / quiz-restart / quiz-home)
+      else if (act && act.indexOf('quiz') === 0 && this._quizAction) this._quizAction(act, ds)
     })
 
     // 右上角暫停按鈕:用 pointerdown(比 click 早,且攔住事件不外漏到 canvas)
@@ -67,6 +70,11 @@ export class UI {
     this._mute = fn
   }
 
+  // 聖經問答的所有按鈕都走這一個回呼:fn(act, dataset)
+  onQuizAction(fn) {
+    this._quizAction = fn
+  }
+
   setMuteIcon(muted) {
     this.muteBtn.textContent = muted ? '🔇' : '🔊'
     this.muteBtn.title = muted ? '取消靜音 (M)' : '靜音 (M)'
@@ -100,6 +108,7 @@ export class UI {
       </div>
       <div class="row">
         <button class="btn ghost" data-act="storm">🌊 第二關 · 暴風雨</button>
+        <button class="btn ghost" data-act="quiz-start">📖 聖經問答</button>
       </div>
       <p class="hint">
         🏃 <b>闖關</b>:自動向前跑,跳過障礙(撞到會扣命)。
@@ -143,6 +152,47 @@ export class UI {
       <div class="row">
         <button class="btn" data-act="resume">▶ 繼續</button>
         <button class="btn ghost" data-act="restart">↻ 重新開始</button>
+      </div>
+    `)
+  }
+
+  // ---- 聖經問答 ----
+  // 出題:single=true 時只有一題(NPC),不顯示「第幾題」。
+  showQuiz(q, index, total, single = false) {
+    const choices = q.choices
+      .map(
+        (c, i) =>
+          `<button class="btn ghost choice" data-act="quiz-choice" data-choice="${i}">${c}</button>`
+      )
+      .join('')
+    this.show(`
+      <div class="kicker">📖 聖經問答</div>
+      ${single ? '' : `<p class="sub">第 ${index + 1} / ${total} 題</p>`}
+      <h2 class="qtext">${q.q}</h2>
+      <div class="choices">${choices}</div>
+    `)
+  }
+
+  // 作答後的回饋:對/錯 + 正解 + 經文出處與解說。
+  // continueLabel 由 game 決定(「繼續」/「看結果」/「回去走走」)。
+  showQuizFeedback(q, chosen, continueLabel) {
+    const correct = chosen === q.answer
+    this.show(`
+      <div class="kicker ${correct ? 'win' : 'lose'}">${correct ? '✓ 答對了!' : '再想想~'}</div>
+      <h2>${q.choices[q.answer]}</h2>
+      <div class="verse"><span class="ref">${q.ref}</span>${q.explain}</div>
+      <button class="btn" data-act="quiz-continue">${continueLabel}</button>
+    `)
+  }
+
+  showQuizSummary(correct, total, remark) {
+    this.show(`
+      <div class="kicker win">問答結束</div>
+      <h2>答對 ${correct} / ${total} 題</h2>
+      <p class="body" style="text-align:center">${remark}</p>
+      <div class="row">
+        <button class="btn ghost" data-act="quiz-restart">↻ 再來一輪</button>
+        <button class="btn" data-act="quiz-home">回標題</button>
       </div>
     `)
   }
