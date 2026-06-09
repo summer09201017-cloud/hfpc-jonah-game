@@ -6,10 +6,10 @@ import { Input } from './input.js'
 import { UI } from './ui.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
-import { LEVEL1, LEVEL2 } from './scripture.js'
+import { LEVEL1, LEVEL2, LEVEL3 } from './scripture.js'
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
-const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz' }
+const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish' }
 const STEP = 1 / 60 // 固定時間步長,讓物理在任何更新率下都一致
 
 export class Game {
@@ -25,6 +25,7 @@ export class Game {
     this.level = 1 // 1=約帕港口(跑酷) / 2=暴風雨(平衡)
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
     this.quiz = null // 進行中的聖經問答(null=沒有);{list,pos,correct,returnTo,single}
+    this.fish = null // 第三關大魚肚的禱告進度;{stations,idx,lit,total,lastCorrect}
     this.last = 0
     this.acc = 0
     this._resetRun()
@@ -43,6 +44,7 @@ export class Game {
     this.ui.onResume(() => this.resume())
     this.ui.onMute(() => this.toggleMute())
     this.ui.onQuizAction((act, ds) => this.handleQuizAction(act, ds)) // 聖經問答按鈕
+    this.ui.onFishAction((act, ds) => this.handleFishAction(act, ds)) // 第三關大魚肚按鈕
     this.ui.setMuteIcon(Audio.muted)
     this.ui.showTitle(LEVEL1)
 
@@ -108,14 +110,16 @@ export class Game {
 
   // 重玩目前這一關(失敗/暫停→重新開始 用)
   restartCurrent() {
-    if (this.level === 2) this.startStorm()
+    if (this.level === 3) this.startFish()
+    else if (this.level === 2) this.startStorm()
     else this.start(this.mode)
   }
 
   // 進入下一關
   next() {
     if (this.level === 1) this.startStorm()
-    // 第二關之後(大魚肚)尚未製作
+    else if (this.level === 2) this.startFish()
+    // 第三關之後(尼尼微)尚未製作
   }
 
   loop(t) {
@@ -339,8 +343,8 @@ export class Game {
     Audio.stopMusic()
     Audio.sfx('win')
     if (this.level === 2) {
-      // 暴風雨:無寶物分數;下一關(大魚肚)尚未製作
-      this.ui.showWin(LEVEL2, null, { showCoins: false, nextLabel: '下一關 · 大魚肚(製作中)', nextEnabled: false })
+      // 暴風雨:無寶物分數;下一關 = 大魚肚
+      this.ui.showWin(LEVEL2, null, { showCoins: false, nextLabel: '下一關 · 大魚肚', nextEnabled: true })
     } else {
       this.ui.showWin(LEVEL1, this.coinsCollected, {
         showCoins: true,
@@ -491,6 +495,75 @@ export class Game {
     this.state = STATE.TITLE
     Audio.stopMusic()
     this.ui.showTitle(LEVEL1)
+  }
+
+  // ---- 第三關 大魚肚(默想:走一遍約拿的禱告,每段點亮一盞「禱告之光」)----
+  handleFishAction(act, ds) {
+    if (act === 'fish-start') this.startFish()
+    else if (act === 'fish-begin') this._fishBeginQuestions()
+    else if (act === 'fish-choice') this.answerFish(Number(ds.choice))
+    else if (act === 'fish-continue') this._fishContinue()
+  }
+
+  startFish() {
+    this._enterImmersive()
+    this.level = 3
+    this.fish = {
+      stations: LEVEL3.stations,
+      idx: 0,
+      lit: 0,
+      total: LEVEL3.stations.length,
+      lastCorrect: false,
+    }
+    this.state = STATE.FISH
+    this.ui.hidePauseButton()
+    Audio.unlock()
+    Audio.stopMusic() // 魚腹安靜,不放輕快旋律
+    this.ui.showFishIntro(LEVEL3)
+  }
+
+  _fishBeginQuestions() {
+    this.fish.idx = 0
+    this._showFishQuestion()
+  }
+
+  _showFishQuestion() {
+    this.ui.showFishQuestion(this.fish.stations[this.fish.idx], this.fish.idx, this.fish.total)
+  }
+
+  answerFish(choice) {
+    if (!this.fish) return
+    const st = this.fish.stations[this.fish.idx]
+    const correct = choice === st.answer
+    this.fish.lastCorrect = correct
+    // 默想關:不論對錯都揭示禱告詞、點亮這一盞燈(禱告不是考試);答對給正向音
+    this.fish.lit = Math.max(this.fish.lit, this.fish.idx + 1)
+    if (correct) Audio.sfx('treasure', { value: 5 })
+    else Audio.sfx('jump')
+    const last = this.fish.idx === this.fish.total - 1
+    this.ui.showFishReveal(st, choice, last)
+  }
+
+  _fishContinue() {
+    if (!this.fish) return
+    if (this.fish.idx >= this.fish.total - 1) {
+      this._fishWin()
+    } else {
+      this.fish.idx += 1
+      this._showFishQuestion()
+    }
+  }
+
+  _fishWin() {
+    this.fish.lit = this.fish.total // 全亮
+    this.state = STATE.WIN
+    this.ui.hidePauseButton()
+    Audio.sfx('win')
+    this.ui.showWin(LEVEL3, null, {
+      showCoins: false,
+      nextLabel: '下一關 · 尼尼微(製作中)',
+      nextEnabled: false,
+    })
   }
 }
 

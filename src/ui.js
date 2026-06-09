@@ -14,6 +14,7 @@ export class UI {
     this._mute = null
     this._storm = null
     this._quizAction = null
+    this._fishAction = null
 
     // 用事件委派處理卡片內的按鈕
     this.card.addEventListener('click', (e) => {
@@ -27,6 +28,8 @@ export class UI {
       else if (act === 'next' && this._next) this._next()
       // 所有聖經問答相關按鈕(quiz-start / quiz-choice / quiz-continue / quiz-restart / quiz-home)
       else if (act && act.indexOf('quiz') === 0 && this._quizAction) this._quizAction(act, ds)
+      // 第三關大魚肚的按鈕(fish-start / fish-begin / fish-choice / fish-continue)
+      else if (act && act.indexOf('fish') === 0 && this._fishAction) this._fishAction(act, ds)
     })
 
     // 右上角暫停按鈕:用 pointerdown(比 click 早,且攔住事件不外漏到 canvas)
@@ -75,6 +78,11 @@ export class UI {
     this._quizAction = fn
   }
 
+  // 第三關大魚肚的所有按鈕都走這一個回呼:fn(act, dataset)
+  onFishAction(fn) {
+    this._fishAction = fn
+  }
+
   setMuteIcon(muted) {
     this.muteBtn.textContent = muted ? '🔇' : '🔊'
     this.muteBtn.title = muted ? '取消靜音 (M)' : '靜音 (M)'
@@ -108,6 +116,9 @@ export class UI {
       </div>
       <div class="row">
         <button class="btn ghost" data-act="storm">🌊 第二關 · 暴風雨</button>
+        <button class="btn ghost" data-act="fish-start">🐋 第三關 · 大魚肚</button>
+      </div>
+      <div class="row">
         <button class="btn ghost" data-act="quiz-start">📖 聖經問答</button>
       </div>
       <p class="hint">
@@ -182,6 +193,43 @@ export class UI {
       <h2>${q.choices[q.answer]}</h2>
       <div class="verse"><span class="ref">${q.ref}</span>${q.explain}</div>
       <button class="btn" data-act="quiz-continue">${continueLabel}</button>
+    `)
+  }
+
+  // ---- 第三關 大魚肚 ----
+  showFishIntro(L) {
+    this.show(`
+      <div class="kicker">${L.title}</div>
+      <p class="sub">${L.subtitle}</p>
+      <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
+      <p class="body">${L.intro.replace(/\n/g, '<br>')}</p>
+      <button class="btn" data-act="fish-begin">🙏 開始禱告</button>
+    `)
+  }
+
+  // 出一段禱告的反思問題(idx 從 0 起)
+  showFishQuestion(st, idx, total) {
+    const choices = st.choices
+      .map(
+        (c, i) =>
+          `<button class="btn ghost choice" data-act="fish-choice" data-choice="${i}">${c}</button>`
+      )
+      .join('')
+    this.show(`
+      <div class="kicker">🐋 魚腹中的禱告　${idx + 1} / ${total}</div>
+      <h2 class="qtext">${st.q}</h2>
+      <div class="choices">${choices}</div>
+    `)
+  }
+
+  // 揭示這一段禱告(和合本)+ 反思;默想關不論對錯都揭示、點燈
+  showFishReveal(st, chosen, last) {
+    const correct = chosen === st.answer
+    this.show(`
+      <div class="kicker ${correct ? 'win' : ''}">${correct ? '✓ 一同禱告' : '再默想一下'}</div>
+      <div class="verse"><span class="ref">${st.ref}</span>${st.line}</div>
+      <p class="body" style="text-align:center">${st.explain}</p>
+      <button class="btn" data-act="fish-continue">${last ? '🌅 浮上水面' : '繼續禱告'}</button>
     `)
   }
 

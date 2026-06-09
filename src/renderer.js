@@ -53,6 +53,11 @@ export class Renderer {
       this._drawStorm(game)
       return
     }
+    // 第三關「大魚肚內」也是另一個畫面
+    if (game.level === 3) {
+      this._drawFish(game)
+      return
+    }
 
     const dist = game.distance || 0
 
@@ -290,6 +295,93 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
     ctx.fillText('順著亮起的箭頭按 ← → (或點畫面左右兩側) 扶正船身', VIEW.W / 2, VIEW.H - 14)
+  }
+
+  // 第三關「大魚肚內」畫面:漆黑的魚腹(肋骨、水、氣泡、禱告的約拿),
+  // 每點亮一盞燈就漸漸變亮。背景動畫(氣泡)用 renderer 自己的時間計數。
+  _drawFish(game) {
+    const ctx = this.ctx
+    const f = game.fish || { lit: 0, total: 1 }
+    this._fishT = (this._fishT || 0) + 1 / 60
+    const t = this._fishT
+    const bright = Math.min(1, (f.lit || 0) / (f.total || 1))
+    const lerp = (a, b, k) => a + (b - a) * k
+
+    // 魚腹內壁(暗紅,隨點燈漸暖亮)
+    const g = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    g.addColorStop(0, `rgb(${lerp(46, 130, bright) | 0},${lerp(20, 46, bright) | 0},${lerp(28, 44, bright) | 0})`)
+    g.addColorStop(1, `rgb(${lerp(20, 78, bright) | 0},${lerp(9, 26, bright) | 0},${lerp(15, 28, bright) | 0})`)
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    // 肋骨(頭頂幾道拱形)
+    ctx.strokeStyle = `rgba(255,205,185,${0.10 + 0.22 * bright})`
+    ctx.lineWidth = 9
+    ctx.lineCap = 'round'
+    for (let i = 0; i < 6; i++) {
+      const top = 30 + i * 18
+      const sideY = VIEW.H * 0.46 + i * 12
+      ctx.beginPath()
+      ctx.moveTo(36, sideY)
+      ctx.quadraticCurveTo(VIEW.W / 2, top, VIEW.W - 36, sideY)
+      ctx.stroke()
+    }
+
+    // 底部的水(深色,微微起伏)
+    const seaY = VIEW.H - 96
+    ctx.fillStyle = `rgba(20,40,60,${0.55 + 0.1 * bright})`
+    ctx.fillRect(0, seaY, VIEW.W, VIEW.H - seaY)
+    ctx.strokeStyle = 'rgba(150,190,210,0.4)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    for (let x = 0; x <= VIEW.W; x += 16) {
+      const yy = seaY + Math.sin(x * 0.03 + t * 2) * 5
+      if (x === 0) ctx.moveTo(x, yy)
+      else ctx.lineTo(x, yy)
+    }
+    ctx.stroke()
+
+    // 上升的氣泡
+    ctx.fillStyle = 'rgba(200,225,235,0.28)'
+    for (let i = 0; i < 18; i++) {
+      const bx = (i * 113 + Math.sin(i + t) * 18) % VIEW.W
+      const by = VIEW.H - ((t * (30 + (i % 5) * 8) + i * 70) % VIEW.H)
+      const r = 2 + (i % 3)
+      ctx.beginPath()
+      ctx.arc(bx, by, r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    // 禱告的約拿(中央偏下;隨變亮加一圈暖光)
+    const jx = VIEW.W / 2
+    const jy = seaY - 26
+    const glow = ctx.createRadialGradient(jx, jy - 6, 4, jx, jy - 6, 90)
+    glow.addColorStop(0, `rgba(255,224,150,${0.18 + 0.5 * bright})`)
+    glow.addColorStop(1, 'rgba(255,224,150,0)')
+    ctx.fillStyle = glow
+    ctx.fillRect(jx - 100, jy - 100, 200, 160)
+    this._emoji('🙏', jx, jy, 64, 'middle')
+
+    // 禱告之光:頂端一排燈,亮起的數量 = 已禱告的段數
+    const n = f.total || 1
+    for (let i = 0; i < n; i++) {
+      const lx = VIEW.W / 2 + (i - (n - 1) / 2) * 76
+      const ly = 64
+      if (i < (f.lit || 0)) {
+        this._emoji('🔥', lx, ly, 36, 'middle')
+      } else {
+        ctx.globalAlpha = 0.4
+        this._emoji('🕯️', lx, ly, 30, 'middle')
+        ctx.globalAlpha = 1
+      }
+    }
+
+    // 進度文字
+    ctx.fillStyle = 'rgba(245,235,220,0.85)'
+    ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'bottom'
+    ctx.fillText(`禱告之光  ${f.lit || 0} / ${n}`, VIEW.W / 2, VIEW.H - 14)
   }
 
   // 用 Canvas 直接畫一個「面向右、奔跑中的先知」。
