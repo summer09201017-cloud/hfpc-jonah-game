@@ -433,17 +433,19 @@ export class Renderer {
       knob: '#6f4720',
     }
 
-    // 腿:跑步前後擺;跳躍時前膝抬高、後腿後伸(躍起姿勢)
-    const legF = airborne ? 0.95 : sw
-    const legB = airborne ? -0.35 : -sw
-    // 後手臂:跑步擺動;跳躍時向後上方甩起
-    const armB = airborne ? -1.3 : sw * 0.9
+    // 腿:跑步前後擺;跳躍時躍起姿勢;蹲下時雙腿外張、屈膝下蹲
+    const legF = crouch ? 0.85 : airborne ? 0.95 : sw
+    const legB = crouch ? -0.85 : airborne ? -0.35 : -sw
+    // 後手臂:跑步擺動;跳躍時向後上方甩起;蹲下時自然垂在身前
+    const armB = crouch ? 0.5 : airborne ? -1.3 : sw * 0.9
 
-    const kneeY = -17
+    // 蹲下:髖部下降、上半身整體下沉(腳仍踩在地上),做出屈膝下蹲的樣子,而不是整個人縮小
+    const sink = crouch ? 15 : 0
+    const kneeY = -17 + (crouch ? 9 : 0)
     const shin = 17
-    const shoulderY = -45
+    const shoulderY = -45 + sink
     const armLen = 16
-    const headY = -53
+    const headY = -53 + sink
     const headR = 7
 
     const drawLeg = (ang) => {
@@ -481,7 +483,6 @@ export class Renderer {
     ctx.save()
     ctx.translate(x, footY + bob)
     if (faceLeft) ctx.scale(-1, 1) // 後退時水平翻轉,讓先知面向左
-    if (crouch) ctx.scale(1, 0.6) // 蹲下:整體往腳底壓低
 
     // 後側手腳(先畫,被身體蓋住,略透明做出前後層次)
     ctx.globalAlpha = 0.82
