@@ -3,3 +3,15 @@
 [build]
   command = "npm run build"
   publish = "site"
+
+# .webmanifest 要用正確 MIME,PWA 安裝才穩(Netlify 預設會給 octet-stream)
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json; charset=utf-8"
+
+# Service Worker 不要被快取,改版才能即時送到已安裝的裝置
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"

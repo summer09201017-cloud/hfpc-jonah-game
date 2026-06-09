@@ -19,7 +19,7 @@ npm run dev      # 啟動 Vite dev server(通常是 http://localhost:5173/,被�
 npm run build    # = node scripts/bundle-static.mjs,輸出到 site/(不是 dist/,也不要用 vite build)
 ```
 
-- 部署:`netlify.toml` 已設好(`command = npm run build`、`publish = site`)。目標站名 `hfpc-jonah`(尚未實際部署)。
+- **已上線:https://hfpc-jonah-game.netlify.app/**(連 GitHub repo 自動部署,push 到 `main` 即重新部署)。`netlify.toml` 已設好(`command = npm run build`、`publish = site`)。
 - ⚠️ 不要用 `vite build`:這台機器的 Node 24 在遞迴 `cpSync`/`rmSync` 會讓行程無聲被殺。詳見 `CLAUDE.md`。
 
 ## 怎麼玩
@@ -60,7 +60,8 @@ src/
 - [x] 第二關 暴風雨(平衡穩船)
 - [x] 音效 + 背景音樂(Web Audio 合成)
 - [x] PWA(可安裝 / 離線)+ 啟動器 `start-game.bat`
-- [ ] 部署到 Netlify(`hfpc-jonah`)+ 離線煙霧測試
+- [x] 部署到 Netlify → https://hfpc-jonah-game.netlify.app/
+- [ ] 離線煙霧測試(手機安裝 → 關網路 → 確認能玩)
 - [ ] 第三關 大魚肚內(拿 1:17–2:10:解謎 + 禱告 + 聖經問答)
 - [ ] 第四~六關:上岸尼尼微、傳道、蓖麻樹
 - [ ] (遠期)多人「大富翁外框」把各關串起來

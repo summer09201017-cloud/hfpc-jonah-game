@@ -27,8 +27,9 @@ npm run dev          # Vite dev server
 npm run build        # 不是 vite build!見下方「重大地雷」
 ```
 - `npm run build` = `node scripts/bundle-static.mjs`,把靜態檔**逐檔複製**到 **`site/`**(不是 `dist/`)。
-- 部署:`netlify.toml` 已設好(`command = npm run build`、`publish = site`)。
-- 目標:Netlify 站名 `hfpc-jonah` → `hfpc-jonah.netlify.app`(**尚未實際部署**,待使用者登入操作)。
+- 部署:`netlify.toml` 已設好(`command = npm run build`、`publish = site`,並加了 .webmanifest MIME / sw.js no-cache 標頭)。
+- **已上線(2026-06-09):連 GitHub repo 自動部署 → https://hfpc-jonah-game.netlify.app/**
+  (站名取了 `hfpc-jonah-game`,非原規劃的 `hfpc-jonah`)。之後 push 到 `main` 會自動重新部署。
 
 ## ⚠️ 三個重大地雷(這台 Windows + Node 24 機器,務必遵守)
 
@@ -85,8 +86,8 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
 
 ## 真正待做(依優先)
 
-1. **部署到 Netlify**(連 GitHub repo 自動部署,或拖 `site/`)→ 站名 `hfpc-jonah`;部署後**離線煙霧測試**
-   (手機安裝→關 Wi-Fi→確認能玩)。
+1. ✅ **已部署**到 https://hfpc-jonah-game.netlify.app/(連 GitHub 自動部署)。剩**離線煙霧測試**
+   (手機安裝→關 Wi-Fi→確認能玩)待做。
 2. **第二關難度微調**(等實測):`config.js` 的 `STORM`(`duration`/`push`/`windGrow`)。
 3. **第三關 大魚肚內**(拿 1:17–2:10):解謎 + 禱告(可放聖經問答;用 `bible-game-studio` 的問答規範)。
 4. 第四關 上岸→尼尼微(跑酷)、第五關 尼尼微傳道(策略+對話)、第六關 蓖麻樹(反思+結局,
