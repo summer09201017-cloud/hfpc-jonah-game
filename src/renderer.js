@@ -252,12 +252,37 @@ export class Renderer {
       }
     }
 
-    // 操作提示
+    // 動態方向提示:大箭頭指出「現在該往哪邊施力」;翻船值高時轉紅、脈動加快
+    const dir = s.suggestDir ? s.suggestDir() : 0
+    if (dir !== 0) {
+      const urgent = s.capsize > 0.4
+      const pulse = 0.4 + 0.4 * Math.abs(Math.sin(t * (urgent ? 9 : 5)))
+      const ax = dir < 0 ? 96 : VIEW.W - 96
+      const ay = VIEW.H * 0.46
+      ctx.save()
+      ctx.globalAlpha = pulse
+      ctx.fillStyle = urgent ? '#ff7a6a' : '#cfe7ff'
+      ctx.translate(ax, ay)
+      ctx.scale(dir, 1) // dir=-1 時水平翻轉成左箭頭
+      ctx.beginPath() // 粗胖的右向箭頭(柄 + 三角頭)
+      ctx.moveTo(-34, -16)
+      ctx.lineTo(6, -16)
+      ctx.lineTo(6, -32)
+      ctx.lineTo(42, 0)
+      ctx.lineTo(6, 32)
+      ctx.lineTo(6, 16)
+      ctx.lineTo(-34, 16)
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+    }
+
+    // 操作提示(常駐文字)
     ctx.fillStyle = 'rgba(235,244,255,0.85)'
     ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
-    ctx.fillText('按住 ← → (或畫面左右兩側) 把船扶正', VIEW.W / 2, VIEW.H - 14)
+    ctx.fillText('順著亮起的箭頭按 ← → (或點畫面左右兩側) 扶正船身', VIEW.W / 2, VIEW.H - 14)
   }
 
   // 用 Canvas 直接畫一個「面向右、奔跑中的先知」。

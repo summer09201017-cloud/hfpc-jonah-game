@@ -38,6 +38,14 @@ export class Storm {
     return dir
   }
 
+  // 建議玩家現在該往哪邊施力來扶正:-1=按左/點左半,+1=按右/點右半,0=已大致平穩。
+  // 供 UI 畫方向提示;與 step() 的施力極性一致(同樣讀 STORM.invertControl)。
+  suggestDir() {
+    if (Math.abs(this.tilt) < 0.05) return 0
+    const polarity = STORM.invertControl ? -1 : 1
+    return -Math.sign(this.tilt) * polarity
+  }
+
   step(dt) {
     if (this.done) return
     this.time += dt
@@ -57,7 +65,10 @@ export class Storm {
     // ---- 平衡物理 ----
     const dir = this._inputDir()
     const tip = Math.sin(this.tilt) * STORM.tip // 失穩力(越傾越倒)
-    const player = -dir * STORM.push // 玩家回正力(注意:按右=施力讓船往右? 直覺上按左扶正左傾)
+    // 玩家回正力:預設「按哪個方向就把船往那邊推」——船向右倒(tilt>0)按 ← 扶正,最直覺。
+    // 方向可在 config 用 STORM.invertControl 整個對調。
+    const polarity = STORM.invertControl ? -1 : 1
+    const player = polarity * dir * STORM.push
     const damp = -this.tiltVel * STORM.damp
     const accel = tip + this.wind + player + damp
     this.tiltVel += accel * dt
