@@ -203,7 +203,7 @@ export class UI {
       <p class="sub">${L.subtitle}</p>
       <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
       <p class="body">${L.intro.replace(/\n/g, '<br>')}</p>
-      <button class="btn" data-act="fish-begin">🙏 開始禱告</button>
+      <button class="btn" data-act="fish-begin">🚶 進入魚腹</button>
     `)
   }
 
@@ -222,14 +222,22 @@ export class UI {
     `)
   }
 
-  // 揭示這一段禱告(和合本)+ 反思;默想關不論對錯都揭示、點燈
-  showFishReveal(st, chosen, last) {
-    const correct = chosen === st.answer
+  // 答對才揭示這一段禱告(和合本)+ 反思,並點亮這盞燈
+  showFishReveal(st, last) {
     this.show(`
-      <div class="kicker ${correct ? 'win' : ''}">${correct ? '✓ 一同禱告' : '再默想一下'}</div>
+      <div class="kicker win">✓ 一同禱告</div>
       <div class="verse"><span class="ref">${st.ref}</span>${st.line}</div>
       <p class="body" style="text-align:center">${st.explain}</p>
-      <button class="btn" data-act="fish-continue">${last ? '🌅 浮上水面' : '繼續禱告'}</button>
+      <button class="btn" data-act="fish-continue">${last ? '🌅 浮上水面' : '繼續前行 →'}</button>
+    `)
+  }
+
+  // 答錯:不點燈、不前進,再想一次
+  showFishTryAgain() {
+    this.show(`
+      <div class="kicker lose">再想想~</div>
+      <p class="body" style="text-align:center">這一段禱告還沒答對。再讀一次題目,想想約拿的心,然後再選一次。</p>
+      <button class="btn" data-act="fish-retry">再試一次</button>
     `)
   }
 

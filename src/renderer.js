@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -301,11 +301,13 @@ export class Renderer {
   // 每點亮一盞燈就漸漸變亮。背景動畫(氣泡)用 renderer 自己的時間計數。
   _drawFish(game) {
     const ctx = this.ctx
-    const f = game.fish || { lit: 0, total: 1 }
+    const f = game.fish || { lit: 0, total: 1, dist: 0, idx: 0, phase: 'intro' }
     this._fishT = (this._fishT || 0) + 1 / 60
     const t = this._fishT
-    const bright = Math.min(1, (f.lit || 0) / (f.total || 1))
+    const total = f.total || 1
+    const bright = Math.min(1, (f.lit || 0) / total)
     const lerp = (a, b, k) => a + (b - a) * k
+    const scroll = (f.idx || 0) * FISH.segment + (f.dist || 0) // 累計前進,用於視差
 
     // 魚腹內壁(暗紅,隨點燈漸暖亮)
     const g = ctx.createLinearGradient(0, 0, 0, VIEW.H)
@@ -314,74 +316,80 @@ export class Renderer {
     ctx.fillStyle = g
     ctx.fillRect(0, 0, VIEW.W, VIEW.H)
 
-    // 肋骨(頭頂幾道拱形)
-    ctx.strokeStyle = `rgba(255,205,185,${0.10 + 0.22 * bright})`
+    // 肋骨(隨前進往左捲動,像穿過魚的胸腔)
+    ctx.strokeStyle = `rgba(255,205,185,${0.12 + 0.22 * bright})`
     ctx.lineWidth = 9
     ctx.lineCap = 'round'
-    for (let i = 0; i < 6; i++) {
-      const top = 30 + i * 18
-      const sideY = VIEW.H * 0.46 + i * 12
+    const ribGap = 175
+    const off = scroll * 0.5 - Math.floor((scroll * 0.5) / ribGap) * ribGap
+    for (let i = -1; i <= Math.ceil(VIEW.W / ribGap) + 1; i++) {
+      const x = i * ribGap - off
       ctx.beginPath()
-      ctx.moveTo(36, sideY)
-      ctx.quadraticCurveTo(VIEW.W / 2, top, VIEW.W - 36, sideY)
+      ctx.moveTo(x, VIEW.H)
+      ctx.quadraticCurveTo(x - 46, VIEW.H * 0.26, x + 8, -20)
       ctx.stroke()
     }
 
-    // 底部的水(深色,微微起伏)
-    const seaY = VIEW.H - 96
-    ctx.fillStyle = `rgba(20,40,60,${0.55 + 0.1 * bright})`
-    ctx.fillRect(0, seaY, VIEW.W, VIEW.H - seaY)
-    ctx.strokeStyle = 'rgba(150,190,210,0.4)'
+    const footY = GROUND_Y
+
+    // 魚腹底(走道)
+    ctx.fillStyle = 'rgba(58,28,32,0.62)'
+    ctx.fillRect(0, footY, VIEW.W, VIEW.H - footY)
+    ctx.strokeStyle = 'rgba(190,150,150,0.25)'
     ctx.lineWidth = 2
     ctx.beginPath()
-    for (let x = 0; x <= VIEW.W; x += 16) {
-      const yy = seaY + Math.sin(x * 0.03 + t * 2) * 5
-      if (x === 0) ctx.moveTo(x, yy)
-      else ctx.lineTo(x, yy)
-    }
+    ctx.moveTo(0, footY)
+    ctx.lineTo(VIEW.W, footY)
     ctx.stroke()
 
     // 上升的氣泡
-    ctx.fillStyle = 'rgba(200,225,235,0.28)'
-    for (let i = 0; i < 18; i++) {
-      const bx = (i * 113 + Math.sin(i + t) * 18) % VIEW.W
-      const by = VIEW.H - ((t * (30 + (i % 5) * 8) + i * 70) % VIEW.H)
-      const r = 2 + (i % 3)
+    ctx.fillStyle = 'rgba(200,225,235,0.25)'
+    for (let i = 0; i < 16; i++) {
+      const bx = (i * 127 + Math.sin(i + t) * 16) % VIEW.W
+      const by = VIEW.H - ((t * (28 + (i % 5) * 7) + i * 80) % VIEW.H)
       ctx.beginPath()
-      ctx.arc(bx, by, r, 0, Math.PI * 2)
+      ctx.arc(bx, by, 2 + (i % 3), 0, Math.PI * 2)
       ctx.fill()
     }
 
-    // 禱告的約拿(中央偏下;隨變亮加一圈暖光)
-    const jx = VIEW.W / 2
-    const jy = seaY - 26
-    const glow = ctx.createRadialGradient(jx, jy - 6, 4, jx, jy - 6, 90)
-    glow.addColorStop(0, `rgba(255,224,150,${0.18 + 0.5 * bright})`)
-    glow.addColorStop(1, 'rgba(255,224,150,0)')
-    ctx.fillStyle = glow
-    ctx.fillRect(jx - 100, jy - 100, 200, 160)
-    this._emoji('🙏', jx, jy, 64, 'middle')
+    // 前方的「禱告之光」:走路時從右邊接近;禱告時就在約拿身旁
+    const jx = 200
+    const lampX = f.phase === 'walk' ? jx + Math.max(0, FISH.segment - (f.dist || 0)) : jx
+    const lampY = footY - 74
+    const halo = ctx.createRadialGradient(lampX, lampY, 3, lampX, lampY, 64)
+    halo.addColorStop(0, 'rgba(255,224,150,0.7)')
+    halo.addColorStop(1, 'rgba(255,224,150,0)')
+    ctx.fillStyle = halo
+    ctx.fillRect(lampX - 64, lampY - 64, 128, 128)
+    this._emoji('🕯️', lampX, lampY, 40, 'middle')
 
-    // 禱告之光:頂端一排燈,亮起的數量 = 已禱告的段數
-    const n = f.total || 1
-    for (let i = 0; i < n; i++) {
-      const lx = VIEW.W / 2 + (i - (n - 1) / 2) * 76
-      const ly = 64
+    // 約拿:走路時邁步(面向右),禱告/站立時不擺動
+    const moving = f.phase === 'walk' && f.moving
+    this._prophet(jx, footY, moving ? scroll * 0.05 : 0, false, false)
+    if (f.phase === 'pray') this._emoji('🙏', jx + 4, footY - 86, 28, 'middle')
+
+    // 頂端:已點亮的禱告之光(進度)
+    for (let i = 0; i < total; i++) {
+      const lx = VIEW.W / 2 + (i - (total - 1) / 2) * 70
       if (i < (f.lit || 0)) {
-        this._emoji('🔥', lx, ly, 36, 'middle')
+        this._emoji('🔥', lx, 54, 32, 'middle')
       } else {
         ctx.globalAlpha = 0.4
-        this._emoji('🕯️', lx, ly, 30, 'middle')
+        this._emoji('🕯️', lx, 54, 26, 'middle')
         ctx.globalAlpha = 1
       }
     }
 
-    // 進度文字
+    // 底部提示 / 進度
     ctx.fillStyle = 'rgba(245,235,220,0.85)'
     ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
-    ctx.fillText(`禱告之光  ${f.lit || 0} / ${n}`, VIEW.W / 2, VIEW.H - 14)
+    if (f.phase === 'walk') {
+      ctx.fillText('按住 → / 點住畫面右側,往前走向禱告之光', VIEW.W / 2, VIEW.H - 12)
+    } else {
+      ctx.fillText(`禱告之光  ${f.lit || 0} / ${total}`, VIEW.W / 2, VIEW.H - 12)
+    }
   }
 
   // 用 Canvas 直接畫一個「面向右、奔跑中的先知」。

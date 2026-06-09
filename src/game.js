@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE } from './config.js'
+import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE, FISH } from './config.js'
 import { Player } from './player.js'
 import { Spawner } from './spawner.js'
 import { Renderer } from './renderer.js'
@@ -162,6 +162,12 @@ export class Game {
     // 第二關「暴風雨」自成一格,交給 Storm 場景處理
     if (this.level === 2) {
       this.storm.step(dt)
+      return
+    }
+
+    // 第三關「大魚肚」的走路段交給 _fishStep(禱告作答時不在 PLAYING,不會進來)
+    if (this.level === 3) {
+      this._fishStep(dt)
       return
     }
 
@@ -497,12 +503,15 @@ export class Game {
     this.ui.showTitle(LEVEL1)
   }
 
-  // ---- 第三關 大魚肚(默想:走一遍約拿的禱告,每段點亮一盞「禱告之光」)----
+  // ---- 第三關 大魚肚:在黑暗中往前走,遇到禱告之光就停下禱告(答對才點燈、再前行)----
   handleFishAction(act, ds) {
     if (act === 'fish-start') this.startFish()
-    else if (act === 'fish-begin') this._fishBeginQuestions()
-    else if (act === 'fish-choice') this.answerFish(Number(ds.choice))
+    else if (act === 'fish-begin') {
+      this.fish.idx = 0
+      this._fishStartWalk()
+    } else if (act === 'fish-choice') this.answerFish(Number(ds.choice))
     else if (act === 'fish-continue') this._fishContinue()
+    else if (act === 'fish-retry') this._showFishQuestion()
   }
 
   startFish() {
@@ -513,7 +522,9 @@ export class Game {
       idx: 0,
       lit: 0,
       total: LEVEL3.stations.length,
-      lastCorrect: false,
+      dist: 0,
+      moving: false,
+      phase: 'intro', // intro / walk(往前走) / pray(禱告作答) / done
     }
     this.state = STATE.FISH
     this.ui.hidePauseButton()
@@ -522,9 +533,32 @@ export class Game {
     this.ui.showFishIntro(LEVEL3)
   }
 
-  _fishBeginQuestions() {
-    this.fish.idx = 0
-    this._showFishQuestion()
+  // 開始往前走一小段(走到下一盞禱告之光);收起卡片,進 PLAYING 讓 step 跑
+  _fishStartWalk() {
+    this.fish.phase = 'walk'
+    this.fish.dist = 0
+    this.ui.hide()
+    this.ui.hidePauseButton()
+    this.state = STATE.PLAYING
+  }
+
+  // 走路段更新(只在 phase==='walk' 有效;走滿一小段就停下禱告)
+  _fishStep(dt) {
+    const f = this.fish
+    if (!f || f.phase !== 'walk') return
+    this.input.consumeJump()
+    this.input.consumeTap()
+    this.input.consumePress()
+    const half = this.input.viewW * 0.5
+    const forward = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
+    f.moving = forward
+    if (forward) f.dist += FISH.walkSpeed * dt
+    if (f.dist >= FISH.segment) {
+      f.dist = FISH.segment
+      f.phase = 'pray'
+      this.state = STATE.FISH
+      this._showFishQuestion()
+    }
   }
 
   _showFishQuestion() {
@@ -532,30 +566,30 @@ export class Game {
   }
 
   answerFish(choice) {
-    if (!this.fish) return
+    if (!this.fish || this.fish.phase !== 'pray') return
     const st = this.fish.stations[this.fish.idx]
-    const correct = choice === st.answer
-    this.fish.lastCorrect = correct
-    // 默想關:不論對錯都揭示禱告詞、點亮這一盞燈(禱告不是考試);答對給正向音
-    this.fish.lit = Math.max(this.fish.lit, this.fish.idx + 1)
-    if (correct) Audio.sfx('treasure', { value: 5 })
-    else Audio.sfx('jump')
-    const last = this.fish.idx === this.fish.total - 1
-    this.ui.showFishReveal(st, choice, last)
+    if (choice === st.answer) {
+      this.fish.lit = this.fish.idx + 1 // 答對才點亮這盞燈
+      Audio.sfx('treasure', { value: 5 })
+      this.ui.showFishReveal(st, this.fish.idx === this.fish.total - 1)
+    } else {
+      Audio.sfx('hit') // 答錯:不點燈、不前進,再想一次
+      this.ui.showFishTryAgain()
+    }
   }
 
   _fishContinue() {
     if (!this.fish) return
-    if (this.fish.idx >= this.fish.total - 1) {
-      this._fishWin()
-    } else {
+    if (this.fish.idx >= this.fish.total - 1) this._fishWin()
+    else {
       this.fish.idx += 1
-      this._showFishQuestion()
+      this._fishStartWalk() // 往前再走一小段,到下一盞燈
     }
   }
 
   _fishWin() {
     this.fish.lit = this.fish.total // 全亮
+    this.fish.phase = 'done'
     this.state = STATE.WIN
     this.ui.hidePauseButton()
     Audio.sfx('win')
