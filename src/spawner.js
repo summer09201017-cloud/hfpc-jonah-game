@@ -50,12 +50,11 @@ export class Spawner {
     this.distSinceObstacle = 0
     this.nextObstacleGap = 520
     this.distSinceTreasure = 0
-    this.nextTreasureGap = 820
+    this.nextTreasureGap = 560 // 船價門檻後調密一點,讓 15/20 較好湊到
     this.distSinceEnemy = 0
     this.nextEnemyGap = 1400
     this.distSinceNpc = 0
     this.nextNpcGap = 1500 // 第一個 NPC 較早出現,讓玩家很快遇到
-    this.npcCount = 0 // 累計第幾個 NPC(用來輪流出不同題)
   }
 
   update(dt, speed, distanceTraveled, goalDistance, enemiesOn = false) {
@@ -86,7 +85,7 @@ export class Spawner {
     this.distSinceTreasure += dx
     if (spawning && this.distSinceTreasure >= this.nextTreasureGap) {
       this.distSinceTreasure = 0
-      this.nextTreasureGap = rand(700, 1300)
+      this.nextTreasureGap = rand(520, 920)
       const t = pickTreasure()
       this.treasures.push({
         x: VIEW.W + 60,
@@ -131,10 +130,10 @@ export class Spawner {
           h: 64,
           size: 54,
           emoji: '🧓', // 碼頭邊的長者,考考你約拿的故事
-          qIndex: this.npcCount, // 原始序號,由 game 取餘數對應題庫
-          done: false,
+          attempts: 0, // 在這位長者答錯幾次(滿 3 次仁慈放行)
+          done: false, // 答對或被放行後 = 通過
+          // 出哪一題由 game 從「還沒答對」的題庫即時挑(答對過的不再出現)
         })
-        this.npcCount++
       }
     }
 

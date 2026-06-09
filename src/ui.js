@@ -185,6 +185,16 @@ export class UI {
     `)
   }
 
+  // 長者的題目這趟都答對了:直接放行的提示卡
+  showQuizAllDone() {
+    this.show(`
+      <div class="kicker win">✓ 都答對了!</div>
+      <h2>長者笑著點點頭</h2>
+      <p class="body" style="text-align:center">你已經把長者的問題都答對了!平安去吧——記得約拿的神,也正在尋找你。</p>
+      <button class="btn" data-act="quiz-continue">繼續前進</button>
+    `)
+  }
+
   showQuizSummary(correct, total, remark) {
     this.show(`
       <div class="kicker win">問答結束</div>

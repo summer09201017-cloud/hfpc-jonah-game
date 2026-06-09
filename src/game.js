@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME } from './config.js'
+import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE } from './config.js'
 import { Player } from './player.js'
 import { Spawner } from './spawner.js'
 import { Renderer } from './renderer.js'
@@ -57,6 +57,9 @@ export class Game {
     this.speed = RUN.startSpeed
     this.coinsCollected = 0
     this.knockbackLeft = 0 // 漫步模式被敵人撞到後,還要往後退的距離
+    this.collectingFare = false // 闖關到船邊但船價不足 → 暫時可自由移動回頭收集
+    this.shortFare = false // 在船邊但船價不足(HUD 提示用)
+    this.answeredCorrect = new Set() // 這趟已答對的題目索引,不再出給 NPC
   }
 
   start(mode) {
@@ -140,12 +143,13 @@ export class Game {
     const tapped = this.input.consumeTap()
     let wantJump = this.input.consumeJump()
 
-    if (this.mode === 'run') {
+    if (this.mode === 'run' && !this.collectingFare) {
       // 闖關:點畫面任意處(非暫停區)= 跳;世界自動向前並加速
       if (press) wantJump = true
       const k = Math.min(1, this.distance / RUN.rampDistance)
       this.speed = RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k
     } else {
+      // 漫步,或「闖關到船邊船價不足、暫時自由移動回頭收集」
       // 漫步:按住 →/畫面右半 = 前進,←/畫面左半 = 後退,輕點 = 跳;無時間壓力
       if (tapped) wantJump = true
       if (this.knockbackLeft > 0) {
@@ -163,32 +167,32 @@ export class Game {
 
     if (wantJump && this.player.jump()) Audio.sfx('jump')
 
-    // 位移(漫步擊退時用剩餘距離限制,且不可退到起點之前)
-    if (this.mode === 'walk' && this.knockbackLeft > 0) {
+    // 位移(漫步/回頭收集時擊退用剩餘距離限制,且不可退到起點之前)
+    if ((this.mode === 'walk' || this.collectingFare) && this.knockbackLeft > 0) {
       const back = Math.min(this.knockbackLeft, WALK.knockbackSpeed * dt)
       this.distance = Math.max(0, this.distance - back)
       this.knockbackLeft -= back
     } else {
       this.distance += this.speed * dt
-      if (this.mode === 'walk') this.distance = Math.max(0, this.distance)
+      if (this.mode === 'walk' || this.collectingFare) this.distance = Math.max(0, this.distance)
     }
 
     this.player.update(dt)
     this.spawner.update(dt, this.speed, this.distance, RUN.goalDistance, this.mode === 'walk')
 
-    // 漫步模式:走近 NPC(碼頭長者)就觸發聖經問答——沒有時間壓力,適合停下來作答
-    if (this.mode === 'walk') {
+    // 漫步模式:走近 NPC(碼頭長者)就觸發聖經問答——沒有時間壓力,適合停下來作答。
+    // (退後途中 knockbackLeft>0 時不觸發,避免答錯被退回後立刻又被同一位問。)
+    if (this.mode === 'walk' && this.knockbackLeft <= 0) {
       for (const npc of this.spawner.npcs) {
         if (!npc.done && Math.abs(npc.x - PLAYER.x) < 46) {
-          npc.done = true
-          this.startNpcQuiz(npc.qIndex)
+          this.startNpcQuiz(npc) // 答對(或試 3 次)才會設 done
           return // 進入問答,本步到此為止
         }
       }
     }
 
-    // 撞到障礙(只有闖關模式會扣命;漫步模式障礙無害,沒有壓力)
-    if (this.mode === 'run' && this.player.invuln <= 0) {
+    // 撞到障礙(只有闖關模式會扣命;漫步、回頭收集船價時障礙無害,沒有壓力)
+    if (this.mode === 'run' && !this.collectingFare && this.player.invuln <= 0) {
       const pb = this.player.hitbox()
       for (const o of this.spawner.obstacles) {
         const ob = { x: o.x - o.w / 2, y: GROUND_Y - o.h, w: o.w, h: o.h }
@@ -219,7 +223,7 @@ export class Game {
         Audio.sfx('stomp')
       } else if (this.player.invuln <= 0) {
         Audio.sfx('hit')
-        if (this.mode === 'run') {
+        if (this.mode === 'run' && !this.collectingFare) {
           this.player.lives -= 1
           this.player.invuln = INVULN_TIME
           if (this.player.lives <= 0) {
@@ -254,8 +258,22 @@ export class Game {
       }
     }
 
-    // 抵達終點 = 過關
-    if (this.distance >= RUN.goalDistance) this.win()
+    // 抵達終點 = 嘗試上船(要先湊夠船價)
+    if (this.distance >= RUN.goalDistance) {
+      const need = this.mode === 'walk' ? FARE.walk : FARE.run
+      if (this.coinsCollected >= need) {
+        this.collectingFare = false
+        this.win()
+        return
+      }
+      // 船價不足:停在船邊,提示回頭收集
+      this.distance = RUN.goalDistance
+      this.shortFare = true
+      // 闖關不能自動回頭 → 暫時切成可自由移動,讓玩家回頭收集船價
+      if (this.mode === 'run') this.collectingFare = true
+    } else {
+      this.shortFare = false
+    }
   }
 
   // 船從畫面右側滑入(終點前 1000px 開始),回傳 x;尚未出現則回 null
@@ -336,14 +354,38 @@ export class Game {
     this._showCurrentQuestion()
   }
 
-  // 漫步遇到 NPC 的單題(rawIndex 取餘數對應題庫,輪流出題)
-  startNpcQuiz(rawIndex) {
-    const n = QUESTIONS.length
-    const idx = ((rawIndex % n) + n) % n
-    this.quiz = { list: [idx], pos: 0, correct: 0, returnTo: 'walk', single: true }
+  // 漫步遇到長者 NPC:單題;答對(或答錯滿 3 次仁慈放行)才算過這位長者。
+  // 出題只從「這趟還沒答對」的題目挑,答對過的不再出現。
+  startNpcQuiz(npc) {
+    const idx = this._pickNpcQuestion(npc)
     this.state = STATE.QUIZ
     this.ui.hidePauseButton()
+    if (idx < 0) {
+      // 題庫裡還沒答對的題目都答完了 → 長者直接放行
+      npc.done = true
+      this.quiz = { single: true, npc, allDone: true }
+      this.ui.showQuizAllDone()
+      return
+    }
+    this.quiz = { list: [idx], pos: 0, correct: 0, returnTo: 'walk', single: true, npc, lastCorrect: false }
     this._showCurrentQuestion()
+  }
+
+  // 從「這趟還沒答對」的題目挑一題(盡量不連續出同一題);沒得出回 -1
+  _pickNpcQuestion(npc) {
+    const pool = []
+    for (let i = 0; i < QUESTIONS.length; i++) {
+      if (!this.answeredCorrect.has(i)) pool.push(i)
+    }
+    if (pool.length === 0) return -1
+    let choices = pool
+    if (pool.length > 1 && npc._lastQ != null) {
+      const f = pool.filter((i) => i !== npc._lastQ)
+      if (f.length) choices = f
+    }
+    const idx = choices[Math.floor(Math.random() * choices.length)]
+    npc._lastQ = idx
+    return idx
   }
 
   _showCurrentQuestion() {
@@ -355,24 +397,54 @@ export class Game {
     if (!this.quiz) return
     const q = QUESTIONS[this.quiz.list[this.quiz.pos]]
     const correct = choice === q.answer
+    this.quiz.lastCorrect = correct
     if (correct) {
       this.quiz.correct += 1
+      if (this.quiz.single) this.answeredCorrect.add(this.quiz.list[0]) // 答對的不再出給 NPC
       Audio.sfx('treasure', { value: 5 })
     } else {
       Audio.sfx('hit')
     }
-    const last = this.quiz.pos === this.quiz.list.length - 1
-    const label = this.quiz.single ? '回去走走' : last ? '看結果' : '下一題'
+    let label
+    if (this.quiz.single) {
+      const npc = this.quiz.npc
+      if (correct) label = '前進!'
+      else if ((npc.attempts || 0) + 1 >= 3) label = '長者讓你過了'
+      else label = '退後幾步,再答一題'
+    } else {
+      const last = this.quiz.pos === this.quiz.list.length - 1
+      label = last ? '看結果' : '下一題'
+    }
     this.ui.showQuizFeedback(q, choice, label)
   }
 
   afterQuizFeedback() {
     if (!this.quiz) return
+    if (this.quiz.allDone) {
+      this._endQuizToWalk() // 長者放行提示卡,按繼續回漫步
+      return
+    }
+    if (this.quiz.single) {
+      const npc = this.quiz.npc
+      if (this.quiz.lastCorrect) {
+        npc.done = true // 答對,過這位長者
+        this._endQuizToWalk()
+      } else {
+        npc.attempts = (npc.attempts || 0) + 1
+        if (npc.attempts >= 3) {
+          npc.done = true // 答錯滿 3 次:仁慈放行,別卡住小孩
+          this._endQuizToWalk()
+        } else {
+          this.knockbackLeft = 5 * WALK.step // 退後 5 步,走回來長者改問別題
+          this._endQuizToWalk()
+        }
+      }
+      return
+    }
+    // 標題練習(多題):往下一題或結算
     this.quiz.pos += 1
     if (this.quiz.pos < this.quiz.list.length) {
       this._showCurrentQuestion()
-    } else if (this.quiz.returnTo === 'walk') {
-      this._endQuizToWalk() // NPC 題答完,回到漫步繼續玩
     } else {
       this.ui.showQuizSummary(
         this.quiz.correct,

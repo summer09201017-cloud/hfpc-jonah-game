@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -560,15 +560,16 @@ export class Renderer {
       }
     }
 
-    // 寶物分數
-    ctx.fillStyle = '#5a3a16'
+    // 船價(收集到的 🪙)/ 上船門檻
+    const fareNeed = game.mode === 'walk' ? FARE.walk : FARE.run
+    ctx.fillStyle = game.coinsCollected >= fareNeed ? '#2f7a32' : '#5a3a16'
     ctx.font = '600 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(`🪙 ${game.coinsCollected}`, game.mode === 'run' ? 156 : 28, 46)
+    ctx.fillText(`🪙 ${game.coinsCollected} / ${fareNeed}`, game.mode === 'run' ? 156 : 28, 46)
 
-    // 漫步模式:底部操作提示
-    if (game.mode === 'walk') {
+    // 漫步模式 / 回頭收集船價:底部操作提示
+    if (game.mode === 'walk' || game.collectingFare) {
       ctx.fillStyle = 'rgba(40,50,64,0.75)'
       ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
       ctx.textAlign = 'center'
@@ -599,6 +600,21 @@ export class Renderer {
     ctx.fillText('約帕', bx, by - 4)
     ctx.textAlign = 'right'
     ctx.fillText('往他施的船 ⛵', bx + barW, by - 4)
+
+    // 到了船邊但船價不足:紅色提示橫幅,引導回頭收集
+    if (game.shortFare) {
+      const need = game.mode === 'walk' ? FARE.walk : FARE.run
+      const msg = `船價不足!需要 ${need}(目前 ${game.coinsCollected})— 回頭(←)多撿一些 🪙 再回船邊上船`
+      ctx.font = '700 19px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const w = ctx.measureText(msg).width + 36
+      ctx.fillStyle = 'rgba(196,75,75,0.94)'
+      roundRect(ctx, (VIEW.W - w) / 2, 72, w, 38, 10)
+      ctx.fill()
+      ctx.fillStyle = '#fff'
+      ctx.fillText(msg, VIEW.W / 2, 91)
+    }
   }
 }
 
