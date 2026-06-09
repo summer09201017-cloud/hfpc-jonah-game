@@ -3,3 +3,6 @@ dist
 site
 *.log
 .DS_Store
+
+# Claude Code 本機個人設定(各機器自有的權限 allowlist,不該共用)
+.claude/settings.local.json

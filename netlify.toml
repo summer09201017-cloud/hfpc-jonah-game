@@ -1,5 +1,5 @@
 # Netlify 部署設定
-# build 只是把靜態檔複製到 dist/(不打包),publish 指向 dist/。
+# build 只是把靜態檔複製到 site/(不打包),publish 指向 site/。
 [build]
   command = "npm run build"
   publish = "site"
