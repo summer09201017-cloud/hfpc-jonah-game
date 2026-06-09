@@ -62,7 +62,29 @@ export class Game {
     this.answeredCorrect = new Set() // 這趟已答對的題目索引,不再出給 NPC
   }
 
+  // 手機/平板(觸控)在使用者點擊「開始」時進全螢幕並鎖橫向;桌機不打擾。
+  // iOS 不支援網頁全螢幕 API → 由「加入主畫面」(manifest 已設 landscape/standalone)達成。
+  _enterImmersive() {
+    try {
+      if (!window.matchMedia || !window.matchMedia('(pointer: coarse)').matches) return
+      const lockLandscape = () => {
+        try {
+          if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {})
+        } catch {}
+      }
+      const el = document.documentElement
+      if (!document.fullscreenElement && el.requestFullscreen) {
+        const p = el.requestFullscreen()
+        if (p && p.then) p.then(lockLandscape).catch(() => {})
+        else lockLandscape()
+      } else {
+        lockLandscape()
+      }
+    } catch {}
+  }
+
   start(mode) {
+    this._enterImmersive()
     this.level = 1
     this.mode = mode === 'walk' ? 'walk' : 'run'
     this._resetRun()
@@ -74,6 +96,7 @@ export class Game {
   }
 
   startStorm() {
+    this._enterImmersive()
     this.level = 2
     this.storm.reset()
     this.ui.hide()
@@ -347,6 +370,7 @@ export class Game {
 
   // 從標題進入的「練習」:隨機抽 5 題
   startQuizPractice() {
+    this._enterImmersive()
     this.quiz = { list: pickQuestions(5), pos: 0, correct: 0, returnTo: 'title', single: false }
     this.state = STATE.QUIZ
     this.ui.hidePauseButton()

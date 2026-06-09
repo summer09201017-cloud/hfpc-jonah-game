@@ -218,3 +218,43 @@ body {
 .pause-btn.show {
   display: flex;
 }
+
+/* ---- 手機直向:提示轉成橫向(只在觸控裝置的直向時蓋住畫面)---- */
+.rotate-hint {
+  display: none;
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    background: #0e2233;
+    color: #eaf4ff;
+    text-align: center;
+    padding: 24px;
+    font-size: 21px;
+    line-height: 1.7;
+  }
+  .rotate-emoji {
+    font-size: 72px;
+    animation: rotateHint 1.8s ease-in-out infinite;
+  }
+  .rotate-hint span {
+    color: #8fb6d4;
+    font-size: 15px;
+  }
+}
+@keyframes rotateHint {
+  0%,
+  100% {
+    transform: rotate(-12deg);
+  }
+  50% {
+    transform: rotate(78deg);
+  }
+}
