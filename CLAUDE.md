@@ -1,6 +1,6 @@
 # CLAUDE.md — 約拿闖關 (Jonah Game)
 
-給接手這個專案的 AI / 開發者讀。**先讀這頁再動手。** 本檔對齊現況(2026-06-08)。
+給接手這個專案的 AI / 開發者讀。**先讀這頁(架構 / 地雷),狀態看 `roadmap.md`(已完成 vs 真正待做),玩法看 `README.md`。** 對齊現況(2026-06-10)。
 
 ## 這是什麼
 
@@ -8,8 +8,8 @@
 台灣教會場景,介面與經文用**繁體中文 + 和合本**;神學取向改革宗/巴刻。
 GitHub: `https://github.com/summer09201017-cloud/hfpc-jonah-game`(branch `main`)。
 
-> 相關但**獨立**的另一個專案:`C:\Users\agape250\Desktop\保羅大富翁`(保羅大富翁,React+Vite 擲骰桌遊)。
-> 兩者共用同一套 skill 生態,但程式碼互不相干。
+> 相關專案:**保羅大富翁**(React+Vite 擲骰移動桌遊外框,GitHub `hfpc-paul-game`;本機路徑 `C:\Users\HFP\Downloads\0609\保羅大富翁\保羅大富翁`,**因機器而異**)。
+> 兩者現在**有關聯**:保羅大富翁把本遊戲的**第一/二關當小遊戲嵌入**,並新增了一條「約拿宣教之旅」棋盤路線。共用同一套 skill 生態。
 
 ## 怎麼跑(開發)
 
@@ -45,15 +45,16 @@ npm run build        # 不是 vite build!見下方「重大地雷」
 index.html / styles.css   外殼 + DOM 覆蓋層(選單用 DOM,遊戲畫面用 Canvas)
 src/
   main.js        進入點 + Service Worker 註冊/解除
-  game.js        主迴圈 + 狀態機(title/playing/paused/win/lose)+ 關卡協調(level 1 跑酷 / level 2 暴風雨)
-  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM…)
-  scripture.js   ★ 各關經文與信息文案(LEVEL1、LEVEL2)
-  player.js      約拿:跳躍與重力、命中框(jump() 回傳是否真的跳了)
-  spawner.js     第一關世界:障礙、空中寶物(加權隨機)、小敵人 的生成與移動
-  storm.js       第二關「暴風雨」整關場景(平衡物理),自成一格不動到第一關
-  renderer.js    所有繪製:背景/角色(向量先知)/HUD/第二關畫面(_drawStorm)
-  input.js       原始輸入提供者(鍵盤 held + 跳/暫停/靜音邊緣 + 指標位置/輕點),game 依模式詮釋
-  ui.js          DOM 覆蓋層(標題/暫停/過關/失敗)+ 右上暫停/靜音鈕
+  game.js        主迴圈 + 狀態機(title/playing/paused/win/lose/quiz/fish)+ 關卡協調(L1 跑酷 / L2 暴風雨 / L3 大魚肚默想 + 聖經問答)
+  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH 大魚肚…)
+  scripture.js   ★ 各關經文與信息文案(LEVEL1、LEVEL2、LEVEL3 含魚腹禱告 stations)
+  quiz.js        ★ 聖經問答題庫(漫步 NPC 長者 + 標題練習,約 22 題,約拿書 1–2)
+  player.js      約拿:跳躍/重力/蹲下(crouching)、命中框
+  spawner.js     第一關世界:障礙、空中寶物(加權隨機)、小敵人、NPC 長者(漫步問答) 的生成與移動
+  storm.js       第二關「暴風雨」整關場景(平衡物理),自成一格
+  renderer.js    所有繪製:背景/角色(向量先知,含跳/蹲)/HUD/第二關(_drawStorm)/第三關(_drawFish)
+  input.js       原始輸入提供者(鍵盤 held:左右/下蹲 + 跳/暫停/靜音邊緣 + 指標),game 依模式詮釋
+  ui.js          DOM 覆蓋層(標題/暫停/過關/失敗 + 聖經問答卡 + 大魚肚卡)+ 右上暫停/靜音鈕
   audio.js       Web Audio 即時合成音效 + 背景音樂(零音檔、可離線)
 scripts/
   bundle-static.mjs  「build」= 複製到 site/(無打包器)
@@ -66,45 +67,24 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
 **改東西的原則:** 調手感只改 `config.js`;改經文只改 `scripture.js`;繪製只在 `renderer.js`;
 輸入語意在 `game.js`(`input.js` 不懂遊戲規則)。renderer 只讀狀態不改狀態。
 
-## 目前已完成(對齊現況)
+## 進度:已完成 vs 真正待做
 
-- **第一關 約帕港口**(拿 1:1–3,橫向跑酷),兩種模式:
-  - 🏃 **闖關**:自動向前+加速,障礙扣命(3 條心),撞到有無敵閃爍。
-  - 🚶 **漫步**:玩家自控,**可前進(→/右半)也可後退(←/左半)**,無時間壓力;障礙無害;
-    小敵人 🐍🦀🐀 可**踩扁加分**,側面撞到**往後退 3 步**(不扣命);跳躍用「輕點」。
-  - 空中寶物加權隨機:🪙1 / 🏺3 / 📜5 / 🕊️10 分 + ❤️ 補命(🕊️ 彩蛋=約拿之意「鴿子」)。
-  - 約拿是**向量繪製的先知**:白袍+頭巾+鬍子+**手杖**,面向右;後退面向左;有跳躍姿勢、站立姿勢。
-  - 背景=**古代近東港城**(平頂、女兒牆、少窗、拱門、偶爾圓頂)。
-- **第二關 暴風雨**(拿 1:4–16,`storm.js`):船像平衡桿搖晃,**←/→(或左右半邊)扶正**,
-  撐過 `STORM.duration` 秒過關、翻船值滿失敗;下雨/閃電+雷聲/帆船搖晃。
-  進入方式:標題「🌊 第二關」鈕,或第一關過關的「下一關」鈕。
-- **音效 + 背景音樂**(`audio.js`,Web Audio):跳/撿寶/踩敵/受擊/過關/失敗/雷聲 + 循環旋律;
-  🔊 靜音鈕(右上)/ M 鍵,設定存 localStorage;暫停鈕(右上,P/Esc);第二關不放旋律。
-- **PWA**:manifest + 手寫 network-first `sw.js`,可安裝/離線;PC localhost 可測安裝。
-- **啟動器** `start-game.bat`(自動找空埠 + 開瀏覽器)。
-- **git + GitHub** 已建並 push;`site/` 可建置。
+**完整、對齊現況的清單見 `roadmap.md`。** 摘要:
 
-## 真正待做(依優先)
+- ✅ 第一關 約帕港口(跑酷 + 漫步;漫步含 NPC 長者聖經問答、船價門檻)、第二關 暴風雨、
+  **第三關 大魚肚(默想:走 / 跳 / 蹲 + 跳起碰蠟燭禱告)**、標題聖經問答、手機橫向全螢幕、音效、PWA、
+  **已部署** https://hfpc-jonah-game.netlify.app/;並**已被保羅大富翁桌遊嵌入第一/二關**。
+- 🔜 待做:離線煙霧測試;第二 / 三關手感實測微調;第四關 上岸→尼尼微、第五關 尼尼微傳道、第六關 蓖麻樹;
+  (可選)真實美術 PNG sprite。
 
-1. ✅ **已部署**到 https://hfpc-jonah-game.netlify.app/(連 GitHub 自動部署)。剩**離線煙霧測試**
-   (手機安裝→關 Wi-Fi→確認能玩)待做。
-2. **第二關難度微調**(等實測):`config.js` 的 `STORM`(`duration`/`push`/`windGrow`)。
-3. **第三關 大魚肚內**(拿 1:17–2:10):解謎 + 禱告(可放聖經問答;用 `bible-game-studio` 的問答規範)。
-4. 第四關 上岸→尼尼微(跑酷)、第五關 尼尼微傳道(策略+對話)、第六關 蓖麻樹(反思+結局,
-   小敵人可用神所安排的**蟲 拿 4:7**)。
-5. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。
-6. (遠期)多人「大富翁 / Mario-Party 外框」把各關當小遊戲串起來(用 `roll-and-move-game` skill)。
+## 相關 skill(`~/.claude/skills/`,**現已存在 6 個遊戲類 skill**)
 
-## 相關 skill(放在 `~/.claude/skills/`)
+> 2026-06-10 校對:下列 6 個遊戲類 skill 現已在本機(也服務保羅大富翁)。
+> 但原先提到的 `bible-game-studio`、`classroom-game-deploy`、`web-launch` **仍不存在**——遇到引用它們的舊指示,請忽略或改用下列現有 skill。
 
-> ⚠️ **2026-06-09 校對:下列遊戲類 skill 目前都不在這台機器的 `~/.claude/skills/`。**
-> 本機實際只有 `save-tokens`、`gsheet-write`、`send-email` 三個通用 skill。
-> 也就是說以下提到「用 web-launch 啟動 / 用 bible-game-studio 問答規範 / 用 roll-and-move-game」的指示,
-> 在這台機器上**暫時無法照做**——需要先把對應 skill 複製/建立到 `~/.claude/skills/` 才能用。
-> (同理,本檔開頭提到保羅大富翁在 `C:\Users\agape250\...`,但本機使用者目錄是 `C:\Users\HFP\`;機器/路徑描述可能是在別台寫的,請以實機為準。)
-
-- `arcade-game-kit` — 本遊戲的即時 2D 引擎藍圖(架構/迴圈/輸入/PWA/Node24 地雷)。
-- `bible-game-studio` — 聖經遊戲系列規範(關卡對應、先知美術、經文/問答、改革宗口吻)。
-- `classroom-game-deploy` — 投影/平板/離線打包上線。
-- `web-launch` — 一鍵啟動 dev + 開瀏覽器(自動找空埠)。
-- `roll-and-move-game`、`game-content-validator` — 桌遊引擎 / 內容驗證(主要服務保羅大富翁)。
+- `arcade-game-kit` — 做可嵌入、零相依的即時 2D Canvas 小遊戲(本遊戲的藍圖)。
+- `embed-minigame` — 把這種小遊戲嵌進 React 桌遊(已用於保羅大富翁)。
+- `add-challenge-station` — 在桌遊棋盤加觸發小遊戲的挑戰站。
+- `roll-and-move-game` — 大富翁 / 擲骰移動桌遊引擎(保羅大富翁本體)。
+- `game-content-validator` — 遊戲內容 JSON 驗證器。
+- `real-geography-board` — 用真實經緯度產生棋盤底圖(可用來做「尼尼微→地中海」真實地圖)。
