@@ -818,11 +818,19 @@ export class Renderer {
       this._emoji('🐛', wx, GROUND_Y + 4, 30)
     }
 
-    // 約拿:蹲姿當坐姿,面向左(望著城);第 1 幕 💢、第 4 幕 😵 心情泡泡
-    this._prophet(jx, GROUND_Y, 0, false, true, true)
-    const moodBob = Math.sin(t * 3) * 3
+    // 約拿:蹲姿當坐姿,面向左(望著城)。
+    // 第 1 幕:生氣 💢;第 4 幕:大大發怒(拿 4:9「我發怒以至於死」)——
+    // 比第一幕更氣:怒氣泡泡更大更多、跳更快,人氣到發抖,還被烈日曬出汗 💦
+    const furious = idx === 3
+    const shake = furious ? Math.sin(t * 16) * 1.6 : 0 // 氣到發抖
+    this._prophet(jx + shake, GROUND_Y, 0, false, true, true)
+    const moodBob = Math.sin(t * (furious ? 6 : 3)) * (furious ? 5 : 3)
     if (idx === 0) this._emoji('💢', jx + 26, GROUND_Y - 78 + moodBob, 26, 'middle')
-    if (idx === 3) this._emoji('😵', jx + 26, GROUND_Y - 78 + moodBob, 26, 'middle')
+    if (furious) {
+      this._emoji('💢', jx + 30, GROUND_Y - 86 + moodBob, 38, 'middle')
+      this._emoji('💢', jx - 26, GROUND_Y - 72 - moodBob, 24, 'middle')
+      this._emoji('💦', jx + 4, GROUND_Y - 56 + moodBob * 0.5, 20, 'middle')
+    }
 
     // 頂端:五幕進度(完成=🌿,未完成=淡色)
     for (let i = 0; i < total; i++) {
