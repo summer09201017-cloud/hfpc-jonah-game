@@ -1,14 +1,14 @@
-import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE, FISH, NINEVEH } from './config.js'
+import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE, FISH, NINEVEH, PREACH } from './config.js'
 import { Player } from './player.js'
 import { Spawner } from './spawner.js'
 import { Renderer } from './renderer.js'
 import { Input } from './input.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
-import { LEVEL1, LEVEL2, LEVEL3, LEVEL4 } from './scripture.js'
+import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5 } from './scripture.js'
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
-const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish' }
+const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach' }
 const STEP = 1 / 60 // 固定時間步長,讓物理在任何更新率下都一致
 
 export class Game {
@@ -37,6 +37,7 @@ export class Game {
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
     this.quiz = null // 進行中的聖經問答(null=沒有);{list,pos,correct,returnTo,single}
     this.fish = null // 第三關大魚肚的禱告進度;{stations,idx,lit,total,lastCorrect}
+    this.preach = null // 第五關尼尼微傳道的進度;{stations,idx,repented,total,dist,phase}
     this.last = 0
     this.acc = 0
     this.stopped = false // 嵌入卸載時設 true，停止 requestAnimationFrame 迴圈
@@ -69,6 +70,7 @@ export class Game {
     this.ui.onMute(() => this.toggleMute())
     this.ui.onQuizAction((act, ds) => this.handleQuizAction(act, ds)) // 聖經問答按鈕
     this.ui.onFishAction((act, ds) => this.handleFishAction(act, ds)) // 第三關大魚肚按鈕
+    this.ui.onPreachAction((act, ds) => this.handlePreachAction(act, ds)) // 第五關傳道按鈕
     this.ui.setMuteIcon(Audio.muted)
     this.ui.showTitle(LEVEL1)
 
@@ -156,7 +158,8 @@ export class Game {
 
   // 重玩目前這一關(失敗/暫停→重新開始 用)
   restartCurrent() {
-    if (this.level === 4) this.startNineveh(this.mode)
+    if (this.level === 5) this.startPreach()
+    else if (this.level === 4) this.startNineveh(this.mode)
     else if (this.level === 3) this.startFish()
     else if (this.level === 2) this.startStorm()
     else this.start(this.mode)
@@ -167,7 +170,8 @@ export class Game {
     if (this.level === 1) this.startStorm()
     else if (this.level === 2) this.startFish()
     else if (this.level === 3) this.startNineveh('run') // 大魚肚 → 上岸往尼尼微(跑酷)
-    // 第四關之後(尼尼微傳道)尚未製作
+    else if (this.level === 4) this.startPreach() // 進了城門 → 尼尼微傳道(對話)
+    // 第五關之後(蓖麻樹)尚未製作
   }
 
   loop(t) {
@@ -217,6 +221,12 @@ export class Game {
     // 第三關「大魚肚」的走路段交給 _fishStep(禱告作答時不在 PLAYING,不會進來)
     if (this.level === 3) {
       this._fishStep(dt)
+      return
+    }
+
+    // 第五關「尼尼微傳道」的走路段交給 _preachStep(對話作答時不在 PLAYING,不會進來)
+    if (this.level === 5) {
+      this._preachStep(dt)
       return
     }
 
@@ -410,11 +420,11 @@ export class Game {
       // 暴風雨:無寶物分數;下一關 = 大魚肚
       this.ui.showWin(LEVEL2, null, { showCoins: false, nextLabel: '下一關 · 大魚肚', nextEnabled: true })
     } else if (this.level === 4) {
-      // 上岸→尼尼微:有寶物分數;下一關 = 尼尼微傳道(尚未製作)
+      // 上岸→尼尼微:有寶物分數;下一關 = 尼尼微傳道
       this.ui.showWin(LEVEL4, this.coinsCollected, {
         showCoins: true,
-        nextLabel: '下一關 · 尼尼微傳道(製作中)',
-        nextEnabled: false,
+        nextLabel: '下一關 · 尼尼微傳道',
+        nextEnabled: true,
       })
     } else {
       this.ui.showWin(LEVEL1, this.coinsCollected, {
@@ -701,6 +711,112 @@ export class Game {
       showCoins: false,
       nextLabel: '下一關 · 上岸往尼尼微',
       nextEnabled: true,
+    })
+  }
+
+  // ---- 第五關 尼尼微傳道(對話 RPG):在城中往前走,走到居民面前停下對話、宣告神的話;
+  //      答對 = 那人悔改(披麻衣)再前行;五位(含王)都悔改 = 過關。----
+  handlePreachAction(act, ds) {
+    if (act === 'preach-start') this.startPreach()
+    else if (act === 'preach-begin') {
+      this.preach.idx = 0
+      this._preachStartWalk()
+    } else if (act === 'preach-choice') this.answerPreach(Number(ds.choice))
+    else if (act === 'preach-continue') this._preachContinue()
+    else if (act === 'preach-retry') this._showPreachDialog()
+  }
+
+  startPreach() {
+    this._enterImmersive()
+    this.level = 5
+    this.preach = {
+      stations: LEVEL5.stations,
+      idx: 0,
+      repented: 0,
+      total: LEVEL5.stations.length,
+      dist: 0,
+      moving: false,
+      phase: 'intro', // intro / walk(往前走) / talk(對話作答) / done
+    }
+    this.player.reset()
+    this.state = STATE.PREACH
+    this.ui.hidePauseButton()
+    Audio.unlock()
+    Audio.startMusic() // 大城街道有市井氣,保留輕快旋律
+    this.ui.showPreachIntro(LEVEL5)
+  }
+
+  // 開始往前走(走到下一位居民面前);收起卡片,進 PLAYING 讓 step 跑
+  _preachStartWalk() {
+    this.preach.phase = 'walk'
+    this.preach.dist = 0
+    this.preach.moving = false
+    this.player.reset()
+    this.ui.hide()
+    this.ui.hidePauseButton()
+    this.state = STATE.PLAYING
+  }
+
+  // 走路段更新(phase==='walk'):→走、↑/輕點跳(好玩用);走到居民面前=停下對話
+  _preachStep(dt) {
+    const f = this.preach
+    if (!f || f.phase !== 'walk') return
+    const p = this.player
+    const wantJump = this.input.consumeJump() || this.input.consumeTap()
+    this.input.consumePress()
+    const half = this.input.viewW * 0.5
+    const walkHeld = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
+    if (wantJump && p.jump()) Audio.sfx('jump')
+    const speed = walkHeld ? PREACH.walkSpeed : 0
+    f.moving = speed > 0
+    if (speed > 0) f.dist = Math.min(PREACH.segment, f.dist + speed * dt)
+    p.update(dt)
+    // 走到居民面前(且落地)= 停下對話
+    if (f.dist >= PREACH.segment && p.onGround) {
+      f.phase = 'talk'
+      this.state = STATE.PREACH
+      Audio.sfx('treasure', { value: 1 })
+      this._showPreachDialog()
+    }
+  }
+
+  _showPreachDialog() {
+    this.ui.showPreachDialog(this.preach.stations[this.preach.idx], this.preach.idx, this.preach.total)
+  }
+
+  answerPreach(choice) {
+    if (!this.preach || this.preach.phase !== 'talk') return
+    const st = this.preach.stations[this.preach.idx]
+    if (choice === st.answer) {
+      this.preach.repented = this.preach.idx + 1 // 答對 = 這位居民悔改
+      Audio.sfx('treasure', { value: 5 })
+      this.ui.showPreachReveal(st, this.preach.idx === this.preach.total - 1)
+    } else {
+      Audio.sfx('hit') // 答錯:那人還沒悔改,再想一次(不懲罰)
+      this.ui.showPreachTryAgain()
+    }
+  }
+
+  _preachContinue() {
+    if (!this.preach) return
+    if (this.preach.idx >= this.preach.total - 1) this._preachWin()
+    else {
+      this.preach.idx += 1
+      this._preachStartWalk() // 往前再走一段,到下一位居民
+    }
+  }
+
+  _preachWin() {
+    this.preach.repented = this.preach.total // 全城悔改
+    this.preach.phase = 'done'
+    this.state = STATE.WIN
+    this.ui.hidePauseButton()
+    Audio.stopMusic()
+    Audio.sfx('win')
+    this.ui.showWin(LEVEL5, null, {
+      showCoins: false,
+      nextLabel: '下一關 · 蓖麻樹(製作中)',
+      nextEnabled: false,
     })
   }
 }

@@ -16,6 +16,7 @@ export class UI {
     this._nineveh = null
     this._quizAction = null
     this._fishAction = null
+    this._preachAction = null
 
     // 用事件委派處理卡片內的按鈕
     this.card.addEventListener('click', (e) => {
@@ -32,6 +33,8 @@ export class UI {
       else if (act && act.indexOf('quiz') === 0 && this._quizAction) this._quizAction(act, ds)
       // 第三關大魚肚的按鈕(fish-start / fish-begin / fish-choice / fish-continue)
       else if (act && act.indexOf('fish') === 0 && this._fishAction) this._fishAction(act, ds)
+      // 第五關尼尼微傳道的按鈕(preach-start / preach-begin / preach-choice / preach-continue / preach-retry)
+      else if (act && act.indexOf('preach') === 0 && this._preachAction) this._preachAction(act, ds)
     })
 
     // 右上角暫停按鈕:用 pointerdown(比 click 早,且攔住事件不外漏到 canvas)
@@ -88,6 +91,11 @@ export class UI {
     this._fishAction = fn
   }
 
+  // 第五關尼尼微傳道的所有按鈕都走這一個回呼:fn(act, dataset)
+  onPreachAction(fn) {
+    this._preachAction = fn
+  }
+
   setMuteIcon(muted) {
     this.muteBtn.textContent = muted ? '🔇' : '🔊'
     this.muteBtn.title = muted ? '取消靜音 (M)' : '靜音 (M)'
@@ -123,6 +131,7 @@ export class UI {
         <button class="btn ghost" data-act="storm">🌊 第二關 · 暴風雨</button>
         <button class="btn ghost" data-act="fish-start">🐋 第三關 · 大魚肚</button>
         <button class="btn ghost" data-act="nineveh">🏙️ 第四關 · 上岸往尼尼微</button>
+        <button class="btn ghost" data-act="preach-start">📣 第五關 · 尼尼微傳道</button>
       </div>
       <div class="row">
         <button class="btn ghost" data-act="quiz-start">📖 聖經問答</button>
@@ -244,6 +253,53 @@ export class UI {
       <div class="kicker lose">再想想~</div>
       <p class="body" style="text-align:center">這一段禱告還沒答對。再讀一次題目,想想約拿的心,然後再選一次。</p>
       <button class="btn" data-act="fish-retry">再試一次</button>
+    `)
+  }
+
+  // ---- 第五關 尼尼微傳道(對話 RPG)----
+  showPreachIntro(L) {
+    this.show(`
+      <div class="kicker">${L.title}</div>
+      <p class="sub">${L.subtitle}</p>
+      <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
+      <p class="body">${L.intro.replace(/\n/g, '<br>')}</p>
+      <button class="btn" data-act="preach-begin">📣 進城傳道</button>
+    `)
+  }
+
+  // 與居民對話:居民先說話(RPG 對話),再請玩家「宣告/回答」(idx 從 0 起)
+  showPreachDialog(st, idx, total) {
+    const choices = st.choices
+      .map(
+        (c, i) =>
+          `<button class="btn ghost choice" data-act="preach-choice" data-choice="${i}">${c}</button>`
+      )
+      .join('')
+    this.show(`
+      <div class="kicker">📣 尼尼微傳道　${idx + 1} / ${total}</div>
+      <p class="sub">${st.emoji} ${st.name}</p>
+      <div class="verse">「${st.say}」</div>
+      <h2 class="qtext">${st.q}</h2>
+      <div class="choices">${choices}</div>
+    `)
+  }
+
+  // 答對 = 這位居民悔改:揭示經文(和合本)+ 教導
+  showPreachReveal(st, last) {
+    this.show(`
+      <div class="kicker win">🙇 ${st.name} 悔改了</div>
+      <div class="verse"><span class="ref">${st.ref}</span>${st.line}</div>
+      <p class="body" style="text-align:center">${st.explain}</p>
+      <button class="btn" data-act="preach-continue">${last ? '🕊️ 看神的回應' : '繼續前行 →'}</button>
+    `)
+  }
+
+  // 答錯:那人還沒悔改,再想一次(不懲罰)
+  showPreachTryAgain() {
+    this.show(`
+      <div class="kicker lose">再想想~</div>
+      <p class="body" style="text-align:center">他還沒被說服。再讀一次他的話,想想經文怎麼說,然後再宣告一次。</p>
+      <button class="btn" data-act="preach-retry">再說一次</button>
     `)
   }
 

@@ -67,14 +67,14 @@ npm run test:offline     # 再加:build → PWA 離線就緒(sw 預快取涵蓋�
 index.html / styles.css   外殼 + DOM 覆蓋層(選單用 DOM,遊戲畫面用 Canvas)
 src/
   main.js        進入點 + Service Worker 註冊/解除
-  game.js        主迴圈 + 狀態機(title/playing/paused/win/lose/quiz/fish)+ 關卡協調(L1 跑酷 / L2 暴風雨 / L3 大魚肚默想 + 聖經問答 / L4 上岸→尼尼微 跑酷,重用 L1 引擎)
-  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH 大魚肚、NINEVEH 第四關…)
-  scripture.js   ★ 各關經文與信息文案(LEVEL1~LEVEL4;LEVEL3 含魚腹禱告 stations;LEVEL1/4 含 hud 進度條地名)
+  game.js        主迴圈 + 狀態機(title/playing/paused/win/lose/quiz/fish/preach)+ 關卡協調(L1 跑酷 / L2 暴風雨 / L3 大魚肚默想 / L4 上岸→尼尼微 跑酷(重用 L1 引擎) / L5 尼尼微傳道 對話 RPG + 聖經問答)
+  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH 大魚肚、NINEVEH 第四關、PREACH 第五關…)
+  scripture.js   ★ 各關經文與信息文案(LEVEL1~LEVEL5;LEVEL3/5 含 stations 站點;LEVEL1/4 含 hud 進度條地名)
   quiz.js        ★ 聖經問答題庫(漫步 NPC 長者 + 標題練習,約 22 題,約拿書 1–2)
   player.js      約拿:跳躍/重力/蹲下(crouching)、命中框
   spawner.js     第一關世界:障礙、空中寶物(加權隨機)、小敵人、NPC 長者(漫步問答) 的生成與移動
   storm.js       第二關「暴風雨」整關場景(平衡物理),自成一格
-  renderer.js    所有繪製:背景/角色(向量先知,含跳/蹲)/HUD/第二關(_drawStorm)/第三關(_drawFish)/第四關(_bgNineveh + _ninevehGate;L1/L4 共用跑酷繪製)
+  renderer.js    所有繪製:背景/角色(向量先知,含跳/蹲)/HUD/第二關(_drawStorm)/第三關(_drawFish)/第四關(_bgNineveh + _ninevehGate;L1/L4 共用跑酷繪製)/第五關(_drawPreach 大城街道)
   input.js       原始輸入提供者(鍵盤 held:左右/下蹲 + 跳/暫停/靜音邊緣 + 指標),game 依模式詮釋
   ui.js          DOM 覆蓋層(標題/暫停/過關/失敗 + 聖經問答卡 + 大魚肚卡)+ 右上暫停/靜音鈕
   audio.js       Web Audio 即時合成音效 + 背景音樂(零音檔、可離線)
@@ -96,10 +96,11 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
 
 - ✅ 第一關 約帕港口(跑酷 + 漫步;漫步含 NPC 長者聖經問答、船價門檻)、第二關 暴風雨、
   **第三關 大魚肚(默想:走 / 跳 / 蹲 + 跳起碰蠟燭禱告)**、**第四關 上岸→尼尼微(神給的第二次機會,跑酷,重用 L1 引擎、無船價、曠野→尼尼微大城門)**、
+  **第五關 尼尼微傳道(對話 RPG:城中行走、與五位居民(守衛/商人/母親/王/百姓)對話宣告,答對=悔改披麻衣,拿 3:4–10)**、
   標題聖經問答、手機橫向全螢幕、音效、PWA(**sw 已預快取整個 app shell,安裝後可直接離線**)、
   **自動化煙霧測試 `npm test`**、**已部署** https://hfpc-jonah-game.netlify.app/;並**已被保羅大富翁桌遊嵌入第一/二關**。
-- 🔜 待做:第二 / 三 / 四關手感實測微調;**真實手機離線實測**(自動檢查已綠,仍建議裝一台確認);
-  第五關 尼尼微傳道、第六關 蓖麻樹;(可選)真實美術 PNG sprite。
+- 🔜 待做:第二~五關手感實測微調;**真實手機離線實測**(自動檢查已綠,仍建議裝一台確認);
+  第六關 蓖麻樹(結局);(可選)真實美術 PNG sprite。
 
 ## 相關 skill(`~/.claude/skills/`)
 

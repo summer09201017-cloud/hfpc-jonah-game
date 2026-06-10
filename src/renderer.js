@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -56,6 +56,11 @@ export class Renderer {
     // 第三關「大魚肚內」也是另一個畫面
     if (game.level === 3) {
       this._drawFish(game)
+      return
+    }
+    // 第五關「尼尼微傳道」也是另一個畫面
+    if (game.level === 5) {
+      this._drawPreach(game)
       return
     }
 
@@ -519,6 +524,83 @@ export class Renderer {
       )
     } else {
       ctx.fillText(`禱告之光  ${f.lit || 0} / ${total}`, VIEW.W / 2, VIEW.H - 12)
+    }
+  }
+
+  // 第五關「尼尼微傳道」畫面:大城街道(白日天空 + 兩層泥磚城屋顯出「極大的城」+ 石板路),
+  // 往前走、走到居民面前停下對話;頂端顯示「悔改」進度(🙇)。
+  _drawPreach(game) {
+    const ctx = this.ctx
+    const f = game.preach || { repented: 0, total: 1, dist: 0, idx: 0, phase: 'intro' }
+    const total = f.total || 1
+    const scroll = (f.idx || 0) * PREACH.segment + (f.dist || 0) // 累計前進,用於視差
+
+    // 白日的大城天空
+    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    sky.addColorStop(0, '#9fd0e8')
+    sky.addColorStop(0.6, '#e9e2c8')
+    sky.addColorStop(1, '#f4ecd6')
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    // 兩層城屋(遠慢近快;近層加偏移讓兩層長相不同)——「尼尼微是極大的城」(拿 3:3)
+    this._buildings(scroll * 0.18)
+    this._buildings(scroll * 0.45 + 4000)
+
+    // 石板街道
+    ctx.fillStyle = '#c9b48a'
+    ctx.fillRect(0, GROUND_Y - 6, VIEW.W, VIEW.H - (GROUND_Y - 6))
+    ctx.fillStyle = '#b09a6e'
+    ctx.fillRect(0, GROUND_Y, VIEW.W, 16)
+    ctx.fillStyle = 'rgba(95,75,45,0.5)'
+    const slab = 72
+    const shift = -(scroll % slab)
+    for (let x = shift; x < VIEW.W; x += slab) ctx.fillRect(x, GROUND_Y, 3, 16)
+
+    const jx = PLAYER.x
+    const p = game.player
+
+    // 這一站的居民:站在這段路的盡頭,走近就會開始對話;未悔改頭上有 💬,悔改後變 🙇
+    const st = (f.stations && f.stations[f.idx]) || null
+    if (st && f.phase !== 'done') {
+      const nx = f.phase === 'walk' ? jx + Math.max(0, PREACH.segment - (f.dist || 0)) : jx + 64
+      if (nx < VIEW.W + 60) {
+        const repentedHere = (f.repented || 0) > f.idx
+        this._emoji(repentedHere ? '🙇' : st.emoji, nx, GROUND_Y + 6, 56)
+        if (!repentedHere) {
+          const bob = Math.sin((scroll + nx) * 0.04) * 3
+          this._emoji('💬', nx, GROUND_Y - 70 + bob, 30, 'middle')
+        }
+      }
+    }
+
+    // 約拿
+    const py = p ? p.y : GROUND_Y
+    const airborne = p ? !p.onGround : false
+    const moving = f.phase === 'walk' && f.moving && !airborne
+    this._prophet(jx, py, moving ? scroll * 0.05 : 0, airborne, false)
+
+    // 頂端:悔改進度(已悔改=🙇,還沒=淡色 👤)
+    for (let i = 0; i < total; i++) {
+      const lx = VIEW.W / 2 + (i - (total - 1) / 2) * 70
+      if (i < (f.repented || 0)) {
+        this._emoji('🙇', lx, 54, 30, 'middle')
+      } else {
+        ctx.globalAlpha = 0.35
+        this._emoji('👤', lx, 54, 26, 'middle')
+        ctx.globalAlpha = 1
+      }
+    }
+
+    // 底部提示 / 進度
+    ctx.fillStyle = 'rgba(60,50,35,0.8)'
+    ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'bottom'
+    if (f.phase === 'walk') {
+      ctx.fillText('按住 →/右側 往前走　·　走到居民面前就停下對話、宣告神的話', VIEW.W / 2, VIEW.H - 12)
+    } else {
+      ctx.fillText(`悔改的人  ${f.repented || 0} / ${total}`, VIEW.W / 2, VIEW.H - 12)
     }
   }
 
