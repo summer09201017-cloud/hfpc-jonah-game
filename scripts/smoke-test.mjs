@@ -31,21 +31,24 @@ const CONFIG = {
   // 內容模組(純 ESM 資料、不碰 DOM),會被 import 後逐項驗證
   quizModule: 'src/quiz.js', // 需 export QUESTIONS[]
   scriptureModule: 'src/scripture.js', // 需 export LEVEL1..n
-  levels: ['LEVEL1', 'LEVEL2', 'LEVEL3', 'LEVEL4', 'LEVEL5'],
+  levels: ['LEVEL1', 'LEVEL2', 'LEVEL3', 'LEVEL4', 'LEVEL5', 'LEVEL6'],
 
   // 狀態機 / 嵌入契約:對 game.js 原始碼做字串斷言
   gameModule: 'src/game.js',
   routingMustInclude: [
     'startNineveh', // 第四關進入點存在
     'startPreach', // 第五關進入點存在
+    'startGourd', // 第六關進入點存在
     'goalPos', // 終點目標座標(已從 shipPos 一般化)
     'LEVEL4', // win/lose 有接第四關文案
     'LEVEL5', // win 有接第五關文案
+    'LEVEL6', // win 有接第六關文案
   ],
   routingMustMatch: [
-    // 大魚肚(L3)過關要能接到第四關;第四關過關要能接到第五關
+    // 關卡鏈:L3 過關→L4;L4 過關→L5;L5 過關→L6(全書六關串起來)
     /this\.level === 3\)\s*this\.startNineveh/,
     /this\.level === 4\)\s*this\.startPreach/,
+    /this\.level === 5\)\s*this\.startGourd/,
   ],
   // 嵌入契約:game.js 不可自己 import UI(ui 必須由外部注入,見 CLAUDE.md「嵌入契約」)
   embedForbid: [/from ['"]\.\/ui\.js['"]/],

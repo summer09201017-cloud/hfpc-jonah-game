@@ -17,6 +17,7 @@ export class UI {
     this._quizAction = null
     this._fishAction = null
     this._preachAction = null
+    this._gourdAction = null
 
     // 用事件委派處理卡片內的按鈕
     this.card.addEventListener('click', (e) => {
@@ -35,6 +36,8 @@ export class UI {
       else if (act && act.indexOf('fish') === 0 && this._fishAction) this._fishAction(act, ds)
       // 第五關尼尼微傳道的按鈕(preach-start / preach-begin / preach-choice / preach-continue / preach-retry)
       else if (act && act.indexOf('preach') === 0 && this._preachAction) this._preachAction(act, ds)
+      // 第六關蓖麻樹的按鈕(gourd-start / gourd-begin / gourd-choice / gourd-continue / gourd-retry)
+      else if (act && act.indexOf('gourd') === 0 && this._gourdAction) this._gourdAction(act, ds)
     })
 
     // 右上角暫停按鈕:用 pointerdown(比 click 早,且攔住事件不外漏到 canvas)
@@ -96,6 +99,11 @@ export class UI {
     this._preachAction = fn
   }
 
+  // 第六關蓖麻樹的所有按鈕都走這一個回呼:fn(act, dataset)
+  onGourdAction(fn) {
+    this._gourdAction = fn
+  }
+
   setMuteIcon(muted) {
     this.muteBtn.textContent = muted ? '🔇' : '🔊'
     this.muteBtn.title = muted ? '取消靜音 (M)' : '靜音 (M)'
@@ -132,6 +140,7 @@ export class UI {
         <button class="btn ghost" data-act="fish-start">🐋 第三關 · 大魚肚</button>
         <button class="btn ghost" data-act="nineveh">🏙️ 第四關 · 上岸往尼尼微</button>
         <button class="btn ghost" data-act="preach-start">📣 第五關 · 尼尼微傳道</button>
+        <button class="btn ghost" data-act="gourd-start">🌿 第六關 · 蓖麻樹</button>
       </div>
       <div class="row">
         <button class="btn ghost" data-act="quiz-start">📖 聖經問答</button>
@@ -300,6 +309,51 @@ export class UI {
       <div class="kicker lose">再想想~</div>
       <p class="body" style="text-align:center">他還沒被說服。再讀一次他的話,想想經文怎麼說,然後再宣告一次。</p>
       <button class="btn" data-act="preach-retry">再說一次</button>
+    `)
+  }
+
+  // ---- 第六關 蓖麻樹(反思結局)----
+  showGourdIntro(L) {
+    this.show(`
+      <div class="kicker">${L.title}</div>
+      <p class="sub">${L.subtitle}</p>
+      <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
+      <p class="body">${L.intro.replace(/\n/g, '<br>')}</p>
+      <button class="btn" data-act="gourd-begin">🌿 坐到棚下</button>
+    `)
+  }
+
+  // 一幕場景結束後的反思問題(idx 從 0 起)
+  showGourdQuestion(st, idx, total) {
+    const choices = st.choices
+      .map(
+        (c, i) =>
+          `<button class="btn ghost choice" data-act="gourd-choice" data-choice="${i}">${c}</button>`
+      )
+      .join('')
+    this.show(`
+      <div class="kicker">🌿 蓖麻樹下　第 ${idx + 1} / ${total} 幕 · ${st.name}</div>
+      <h2 class="qtext">${st.q}</h2>
+      <div class="choices">${choices}</div>
+    `)
+  }
+
+  // 答對:揭示這一幕的經文(和合本)+ 反思
+  showGourdReveal(st, last) {
+    this.show(`
+      <div class="kicker win">✓ ${st.name}</div>
+      <div class="verse"><span class="ref">${st.ref}</span>${st.line}</div>
+      <p class="body" style="text-align:center">${st.explain}</p>
+      <button class="btn" data-act="gourd-continue">${last ? '📖 全書終' : '下一幕 →'}</button>
+    `)
+  }
+
+  // 答錯:再想一次(反思關,不懲罰)
+  showGourdTryAgain() {
+    this.show(`
+      <div class="kicker lose">再想想~</div>
+      <p class="body" style="text-align:center">回想剛才那一幕發生了什麼,經文怎麼說,然後再選一次。</p>
+      <button class="btn" data-act="gourd-retry">再試一次</button>
     `)
   }
 
