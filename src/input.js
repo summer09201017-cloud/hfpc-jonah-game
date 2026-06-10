@@ -28,7 +28,9 @@ export class Input {
   }
 
   attach(canvas) {
-    window.addEventListener('keydown', (e) => {
+    this.canvas = canvas
+    // 處理器存成具名參考,detach() 才能移除(嵌入反覆進出小遊戲不會累積監聽)。
+    this._onKeyDown = (e) => {
       switch (e.code) {
         case 'Space':
         case 'ArrowUp':
@@ -58,8 +60,8 @@ export class Input {
           this.muteQueued = true
           break
       }
-    })
-    window.addEventListener('keyup', (e) => {
+    }
+    this._onKeyUp = (e) => {
       switch (e.code) {
         case 'ArrowRight':
         case 'KeyD':
@@ -74,7 +76,7 @@ export class Input {
           this.down = false
           break
       }
-    })
+    }
 
     const updatePos = (e) => {
       const rect = canvas.getBoundingClientRect()
@@ -84,7 +86,7 @@ export class Input {
       this.pointerY = e.clientY - rect.top
     }
 
-    canvas.addEventListener('pointerdown', (e) => {
+    this._onPointerDown = (e) => {
       e.preventDefault()
       updatePos(e)
       // 右上角熱區 → 暫停(不算按住,避免漫步模式誤判成走路)
@@ -101,30 +103,51 @@ export class Input {
       this._downX = this.pointerX
       this._downY = this.pointerY
       this._moved = false
-    })
-    canvas.addEventListener('pointermove', (e) => {
+    }
+    this._onPointerMove = (e) => {
       if (this.pointerDown) {
         updatePos(e)
         if (Math.hypot(this.pointerX - this._downX, this.pointerY - this._downY) > 14) {
           this._moved = true
         }
       }
-    })
-    const end = () => {
+    }
+    this._onPointerEnd = () => {
       if (this.pointerDown) {
         // 短按(<200ms)且幾乎沒移動 = 輕點 → 漫步模式當跳躍
         if (performance.now() - this._downT < 200 && !this._moved) this.tapQueued = true
       }
       this.pointerDown = false
     }
-    canvas.addEventListener('pointerup', end)
-    canvas.addEventListener('pointercancel', end)
-
-    // 視窗失焦時清掉「按住」狀態,避免卡住一直走/跳
-    window.addEventListener('blur', () => {
+    this._onBlur = () => {
+      // 視窗失焦時清掉「按住」狀態,避免卡住一直走/跳
       this.right = this.left = this.down = false
       this.pointerDown = false
-    })
+    }
+
+    window.addEventListener('keydown', this._onKeyDown)
+    window.addEventListener('keyup', this._onKeyUp)
+    canvas.addEventListener('pointerdown', this._onPointerDown)
+    canvas.addEventListener('pointermove', this._onPointerMove)
+    canvas.addEventListener('pointerup', this._onPointerEnd)
+    canvas.addEventListener('pointercancel', this._onPointerEnd)
+    window.addEventListener('blur', this._onBlur)
+  }
+
+  // 移除所有監聽(嵌入卸載時 game.destroy() 呼叫;單機不會用到)。
+  detach() {
+    if (this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown)
+    if (this._onKeyUp) window.removeEventListener('keyup', this._onKeyUp)
+    if (this._onBlur) window.removeEventListener('blur', this._onBlur)
+    const c = this.canvas
+    if (c) {
+      if (this._onPointerDown) c.removeEventListener('pointerdown', this._onPointerDown)
+      if (this._onPointerMove) c.removeEventListener('pointermove', this._onPointerMove)
+      if (this._onPointerEnd) {
+        c.removeEventListener('pointerup', this._onPointerEnd)
+        c.removeEventListener('pointercancel', this._onPointerEnd)
+      }
+    }
   }
 
   consumeJump() {

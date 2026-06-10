@@ -1,8 +1,10 @@
 import { Game } from './game.js'
+import { UI } from './ui.js'
 
 // 進入點:建立遊戲、啟動。
+// ui 由進入點注入（單機用真 UI；嵌入保羅大富翁時改注入空殼 NullUI，見保羅的 MiniGameModal）。
 const canvas = document.getElementById('game')
-const game = new Game(canvas)
+const game = new Game(canvas, { ui: new UI() })
 game.boot()
 
 // Service Worker 策略:
