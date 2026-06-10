@@ -627,7 +627,7 @@ export class Renderer {
       ['#e8a96a', '#f3cf9b', '#f7e7c8'], // 0 棚下:黃昏悶熱
       ['#8fc8e8', '#cde9f3', '#eaf7f0'], // 1 蓖麻:清爽
       ['#f0b2c0', '#f7d6c2', '#fbeed8'], // 2 蟲子:黎明
-      ['#f5d35a', '#f7e08a', '#fdf3c0'], // 3 東風:烈日
+      ['#f2a040', '#f6c468', '#fce69a'], // 3 東風:烈日當空,天色發燙
       ['#ffd9a0', '#ffe9c4', '#fff7e6'], // 4 神的心:金色晨光
     ]
     const sk = SKIES[Math.min(idx, SKIES.length - 1)]
@@ -638,20 +638,44 @@ export class Renderer {
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, VIEW.W, VIEW.H)
 
-    // 第 4 幕:烈日 + 炎熱的東風(風線由右往左飄)
+    // 第 4 幕:烈日(大太陽 + 光芒脈動)+ 炎熱的東風(風線由右往左飄)+ 地面熱浪
     if (idx === 3) {
       const sx = VIEW.W * 0.72
       const sy = VIEW.H * 0.2
-      const halo = ctx.createRadialGradient(sx, sy, 8, sx, sy, 150)
-      halo.addColorStop(0, 'rgba(255,250,220,0.95)')
-      halo.addColorStop(1, 'rgba(255,250,220,0)')
+      const pulse = 1 + Math.sin(t * 3) * 0.06 // 烈日灼熱脈動
+      // 大光暈
+      const halo = ctx.createRadialGradient(sx, sy, 10, sx, sy, 210)
+      halo.addColorStop(0, 'rgba(255,238,180,0.95)')
+      halo.addColorStop(0.5, 'rgba(255,210,120,0.45)')
+      halo.addColorStop(1, 'rgba(255,210,120,0)')
       ctx.fillStyle = halo
-      ctx.fillRect(sx - 150, sy - 150, 300, 300)
-      ctx.fillStyle = '#fff6d8'
+      ctx.fillRect(sx - 210, sy - 210, 420, 420)
+      // 光芒(12 道,緩慢旋轉)
+      ctx.fillStyle = 'rgba(255,214,110,0.65)'
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2 + t * 0.25
+        ctx.save()
+        ctx.translate(sx, sy)
+        ctx.rotate(a)
+        ctx.beginPath()
+        ctx.moveTo(52 * pulse, -7)
+        ctx.lineTo(86 * pulse, 0)
+        ctx.lineTo(52 * pulse, 7)
+        ctx.closePath()
+        ctx.fill()
+        ctx.restore()
+      }
+      // 日輪
+      ctx.fillStyle = '#fff1c0'
       ctx.beginPath()
-      ctx.arc(sx, sy, 34, 0, Math.PI * 2)
+      ctx.arc(sx, sy, 44 * pulse, 0, Math.PI * 2)
       ctx.fill()
-      ctx.strokeStyle = 'rgba(214,160,90,0.5)'
+      ctx.fillStyle = '#ffe28a'
+      ctx.beginPath()
+      ctx.arc(sx, sy, 34 * pulse, 0, Math.PI * 2)
+      ctx.fill()
+      // 炎熱的東風(風線由右往左)
+      ctx.strokeStyle = 'rgba(214,150,80,0.55)'
       ctx.lineWidth = 3
       for (let i = 0; i < 7; i++) {
         const wy = 90 + i * 52 + Math.sin(t * 2 + i) * 6
@@ -661,6 +685,22 @@ export class Renderer {
         ctx.quadraticCurveTo(wx - 40, wy - 8, wx - 84, wy)
         ctx.stroke()
       }
+      // 地面附近的熱浪(扭動的細波,往上飄)
+      ctx.strokeStyle = 'rgba(255,235,190,0.4)'
+      ctx.lineWidth = 2
+      for (let i = 0; i < 5; i++) {
+        const hy = GROUND_Y - 8 - ((t * 26 + i * 22) % 70)
+        ctx.beginPath()
+        for (let x = 0; x <= VIEW.W; x += 18) {
+          const off = Math.sin(x * 0.05 + t * 5 + i * 2) * 3.5
+          if (x === 0) ctx.moveTo(x, hy + off)
+          else ctx.lineTo(x, hy + off)
+        }
+        ctx.stroke()
+      }
+      // 整體加一層灼熱色調
+      ctx.fillStyle = 'rgba(255,140,60,0.08)'
+      ctx.fillRect(0, 0, VIEW.W, VIEW.H)
     }
     // 第 5 幕:從天而下的柔光(神的憐憫照著大城)
     if (idx === 4) {

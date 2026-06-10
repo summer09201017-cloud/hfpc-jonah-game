@@ -431,19 +431,26 @@ export class Game {
     if (this.embed) return this._finish(true)
     if (this.level === 2) {
       // 暴風雨:無寶物分數;下一關 = 大魚肚
-      this.ui.showWin(LEVEL2, null, { showCoins: false, nextLabel: '下一關 · 大魚肚', nextEnabled: true })
+      this.ui.showWin(LEVEL2, null, {
+        showCoins: false,
+        nextLabel: '下一關 · 大魚肚',
+        nextEnabled: true,
+        progress: '約拿的旅程 2 / 6',
+      })
     } else if (this.level === 4) {
       // 上岸→尼尼微:有寶物分數;下一關 = 尼尼微傳道
       this.ui.showWin(LEVEL4, this.coinsCollected, {
         showCoins: true,
         nextLabel: '下一關 · 尼尼微傳道',
         nextEnabled: true,
+        progress: '約拿的旅程 4 / 6',
       })
     } else {
       this.ui.showWin(LEVEL1, this.coinsCollected, {
         showCoins: true,
         nextLabel: '下一關 · 暴風雨',
         nextEnabled: true,
+        progress: '約拿的旅程 1 / 6',
       })
     }
   }
@@ -724,6 +731,7 @@ export class Game {
       showCoins: false,
       nextLabel: '下一關 · 上岸往尼尼微',
       nextEnabled: true,
+      progress: '約拿的旅程 3 / 6',
     })
   }
 
@@ -830,6 +838,7 @@ export class Game {
       showCoins: false,
       nextLabel: '下一關 · 蓖麻樹',
       nextEnabled: true,
+      progress: '約拿的旅程 5 / 6',
     })
   }
 
@@ -924,6 +933,7 @@ export class Game {
       showCoins: false,
       nextLabel: '🏠 回標題(全書完)',
       nextEnabled: true, // next() 在第六關會回標題
+      progress: '約拿的旅程 6 / 6 · 全書完 🎉',
     })
   }
 }

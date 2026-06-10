@@ -154,13 +154,14 @@ export class UI {
     `)
   }
 
-  // opts: { showCoins, nextLabel, nextEnabled }
+  // opts: { showCoins, nextLabel, nextEnabled, progress }(progress = 「約拿的旅程 X / 6」字樣)
   showWin(L, coins, opts = {}) {
     const showCoins = opts.showCoins !== false
     const nextLabel = opts.nextLabel || '下一關'
     const nextAttr = opts.nextEnabled ? '' : 'disabled'
     this.show(`
       <div class="kicker win">過關!</div>
+      ${opts.progress ? `<p class="sub">${opts.progress}</p>` : ''}
       <h2>${L.win.head}</h2>
       <p class="body">${L.win.body.replace(/\n/g, '<br>')}</p>
       <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
