@@ -13,6 +13,7 @@ export class UI {
     this._pause = null
     this._mute = null
     this._storm = null
+    this._nineveh = null
     this._quizAction = null
     this._fishAction = null
 
@@ -23,6 +24,7 @@ export class UI {
       const act = ds.act
       if (act === 'start' && this._start) this._start(ds.mode || 'run')
       else if (act === 'storm' && this._storm) this._storm()
+      else if (act === 'nineveh' && this._nineveh) this._nineveh()
       else if (act === 'restart' && this._restart) this._restart()
       else if (act === 'resume' && this._resume) this._resume()
       else if (act === 'next' && this._next) this._next()
@@ -49,6 +51,9 @@ export class UI {
 
   onStorm(fn) {
     this._storm = fn
+  }
+  onNineveh(fn) {
+    this._nineveh = fn
   }
 
   onStart(fn) {
@@ -117,6 +122,7 @@ export class UI {
       <div class="row">
         <button class="btn ghost" data-act="storm">🌊 第二關 · 暴風雨</button>
         <button class="btn ghost" data-act="fish-start">🐋 第三關 · 大魚肚</button>
+        <button class="btn ghost" data-act="nineveh">🏙️ 第四關 · 上岸往尼尼微</button>
       </div>
       <div class="row">
         <button class="btn ghost" data-act="quiz-start">📖 聖經問答</button>

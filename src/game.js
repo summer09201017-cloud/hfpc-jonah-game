@@ -61,6 +61,7 @@ export class Game {
 
     this.ui.onStart((mode) => this.start(mode))
     this.ui.onStorm(() => this.startStorm()) // 標題上直接挑第二關
+    this.ui.onNineveh(() => this.startNineveh('run')) // 標題上直接挑第四關(方便試玩/示範)
     this.ui.onRestart(() => this.restartCurrent()) // 重玩目前這一關
     this.ui.onNext(() => this.next()) // 進入下一關
     this.ui.onPause(() => this.pause())
