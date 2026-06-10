@@ -15,7 +15,7 @@ export class Game {
   // opts（單機 / 嵌入共用，皆可省略 → 用預設）：
   //   ui         —— 由外部注入。單機 main.js 傳 new UI()；嵌入(保羅大富翁)傳「空殼 NullUI」。
   //   embed      —— true 時跳過標題、直接開指定關卡、結束時回呼 onComplete（給保羅彈窗用）。
-  //   level      —— 嵌入要開的關：1=跑酷 / 2=暴風雨（嵌入只支援 1、2；3=大魚肚是 DOM 選單流程，不嵌入）。
+  //   level      —— 嵌入要開的關：1=跑酷 / 2=暴風雨 / 4=上岸→尼尼微跑酷（3=大魚肚、5=傳道是 DOM 選單流程，不嵌入）。
   //   mode       —— 'run'(闖關) / 'walk'(漫步)。
   //   hudLabels  —— 進度條兩端文字 { start, goal }；單機=約拿地名，嵌入可傳通用「起點/終點」。
   //   onComplete({ won, score, level }) —— 嵌入過關 / 失敗時呼叫。
@@ -26,9 +26,10 @@ export class Game {
     this.ui = opts.ui // 由外部注入（單機 new UI()／嵌入 NullUI）
     this.embed = !!opts.embed
     this.onComplete = opts.onComplete || null
-    this.embedLevel = opts.level === 2 ? 2 : 1 // 嵌入夾在 1、2（不開大魚肚）
+    this.embedLevel = [1, 2, 4].includes(opts.level) ? opts.level : 1 // 嵌入支援 1/2/4（3=大魚肚、5=傳道是 DOM 選單流程，不嵌入）
     this.embedMode = opts.mode === 'walk' ? 'walk' : 'run'
-    this.hudLabels = opts.hudLabels || { ...LEVEL1.hud }
+    this._hudOverride = opts.hudLabels || null // 外層(保羅)注入的進度條地名；沒注入時各關用自己的預設(LEVELx.hud)
+    this.hudLabels = this._hudOverride || { ...LEVEL1.hud }
     this.player = new Player()
     this.spawner = new Spawner()
     this.storm = new Storm(this)
@@ -55,6 +56,7 @@ export class Game {
       // 嵌入(保羅大富翁)：跳過標題選單，直接開指定關卡（UI 是空殼，標題按鈕用不到）。
       Audio.unlock()
       if (this.embedLevel === 2) this.startStorm()
+      else if (this.embedLevel === 4) this.startNineveh(this.embedMode)
       else this.start(this.embedMode)
       requestAnimationFrame((t) => this.loop(t))
       return
@@ -119,8 +121,8 @@ export class Game {
     this.level = 1
     this.mode = mode === 'walk' ? 'walk' : 'run'
     this._resetRun()
-    // 單機:把進度條地名設回第一關;嵌入(保羅)時保留外層注入的 hudLabels(嵌入契約)
-    if (!this.embed) this.hudLabels = { ...LEVEL1.hud }
+    // 進度條地名:外層(保羅)有注入就用注入的,否則用第一關預設(嵌入契約)
+    this.hudLabels = this._hudOverride || { ...LEVEL1.hud }
     this.ui.hide()
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
@@ -129,7 +131,7 @@ export class Game {
   }
 
   // 第四關 上岸→尼尼微:重用第一關跑酷引擎,換主題(曠野→尼尼微大城)、無船價門檻。
-  // (只在單機流程使用;嵌入夾在第一/二關,不會進來。)
+  // (單機與嵌入皆可用:嵌入 opts.level=4 直接開這關;無 DOM 選單流程,嵌入安全。)
   startNineveh(mode) {
     this._enterImmersive()
     this.level = 4
@@ -137,7 +139,8 @@ export class Game {
     this._resetRun()
     this.goalDistance = NINEVEH.goalDistance
     this.fareEnabled = false // 往尼尼微是順服,不是買船票:走到城門即過關
-    this.hudLabels = { ...LEVEL4.hud }
+    // 進度條地名:外層(保羅)有注入就用注入的,否則用第四關預設(旱地→尼尼微;嵌入契約)
+    this.hudLabels = this._hudOverride || { ...LEVEL4.hud }
     this.ui.hide()
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
