@@ -60,44 +60,11 @@ export class Renderer {
     }
 
     const dist = game.distance || 0
+    const nineveh = game.level === 4
 
-    // 天空
-    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
-    sky.addColorStop(0, '#8fd3ff')
-    sky.addColorStop(0.6, '#cfeeff')
-    sky.addColorStop(1, '#e9f7ff')
-    ctx.fillStyle = sky
-    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
-
-    // 遠景建築(視差,捲動較慢)
-    this._buildings(dist * 0.25)
-
-    // 海
-    ctx.fillStyle = '#3a86c8'
-    ctx.fillRect(0, GROUND_Y - 8, VIEW.W, VIEW.H - (GROUND_Y - 8))
-    // 波浪
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'
-    ctx.lineWidth = 3
-    for (let i = 0; i < 3; i++) {
-      const yy = GROUND_Y + 20 + i * 26
-      ctx.beginPath()
-      for (let x = 0; x <= VIEW.W; x += 20) {
-        const off = Math.sin((x + dist * 0.5 + i * 40) * 0.03) * 4
-        if (x === 0) ctx.moveTo(x, yy + off)
-        else ctx.lineTo(x, yy + off)
-      }
-      ctx.stroke()
-    }
-
-    // 碼頭木板(地面)
-    ctx.fillStyle = '#b07a43'
-    ctx.fillRect(0, GROUND_Y, VIEW.W, 18)
-    ctx.fillStyle = '#8a5e30'
-    const plankW = 56
-    const shift = -(dist % plankW)
-    for (let x = shift; x < VIEW.W; x += plankW) {
-      ctx.fillRect(x, GROUND_Y, 3, 18)
-    }
+    // 背景:第一關=約帕港口(海+碼頭木板);第四關=曠野路 → 尼尼微大城(沙地)
+    if (nineveh) this._bgNineveh(dist)
+    else this._bgHarbor(dist)
 
     // 空中寶物(船價/陶罐/經卷/鴿子/愛心)
     for (const c of game.spawner.treasures) {
@@ -123,10 +90,11 @@ export class Renderer {
       this._emoji(n.done ? '✅' : '❓', n.x, GROUND_Y - 66 + bob, 30, 'middle')
     }
 
-    // 往他施的船(接近終點時滑入)
-    const shipX = game.shipPos(dist)
-    if (shipX !== null) {
-      this._emoji('⛵', shipX, GROUND_Y + 8, 120)
+    // 終點目標(接近終點時滑入):第一關=往他施的船 ⛵,第四關=尼尼微城門
+    const goalX = game.goalPos(dist)
+    if (goalX !== null) {
+      if (nineveh) this._ninevehGate(goalX)
+      else this._emoji('⛵', goalX, GROUND_Y + 8, 120)
     }
 
     // 約拿(向先知,向右奔跑;受擊無敵時閃爍)
@@ -142,6 +110,147 @@ export class Renderer {
 
     // HUD
     this._hud(game)
+  }
+
+  // 第一關背景:約帕港口(藍天 + 遠景泥磚城 + 海 + 碼頭木板)
+  _bgHarbor(dist) {
+    const ctx = this.ctx
+    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    sky.addColorStop(0, '#8fd3ff')
+    sky.addColorStop(0.6, '#cfeeff')
+    sky.addColorStop(1, '#e9f7ff')
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    this._buildings(dist * 0.25) // 遠景建築(視差,捲動較慢)
+
+    // 海
+    ctx.fillStyle = '#3a86c8'
+    ctx.fillRect(0, GROUND_Y - 8, VIEW.W, VIEW.H - (GROUND_Y - 8))
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+    ctx.lineWidth = 3
+    for (let i = 0; i < 3; i++) {
+      const yy = GROUND_Y + 20 + i * 26
+      ctx.beginPath()
+      for (let x = 0; x <= VIEW.W; x += 20) {
+        const off = Math.sin((x + dist * 0.5 + i * 40) * 0.03) * 4
+        if (x === 0) ctx.moveTo(x, yy + off)
+        else ctx.lineTo(x, yy + off)
+      }
+      ctx.stroke()
+    }
+
+    // 碼頭木板(地面)
+    ctx.fillStyle = '#b07a43'
+    ctx.fillRect(0, GROUND_Y, VIEW.W, 18)
+    ctx.fillStyle = '#8a5e30'
+    const plankW = 56
+    const shift = -(dist % plankW)
+    for (let x = shift; x < VIEW.W; x += plankW) {
+      ctx.fillRect(x, GROUND_Y, 3, 18)
+    }
+  }
+
+  // 第四關背景:曠野路 → 尼尼微大城(暖色晨光天空 + 遠方沙丘 + 遠景城 + 沙地土路)
+  _bgNineveh(dist) {
+    const ctx = this.ctx
+    // 晨光天空(順服神的新一天)
+    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    sky.addColorStop(0, '#f5b96a')
+    sky.addColorStop(0.5, '#fbdca6')
+    sky.addColorStop(1, '#fcefd3')
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    // 低空暖陽 + 光暈
+    const sunX = VIEW.W * 0.78
+    const sunY = VIEW.H * 0.26
+    const halo = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 120)
+    halo.addColorStop(0, 'rgba(255,243,210,0.95)')
+    halo.addColorStop(1, 'rgba(255,243,210,0)')
+    ctx.fillStyle = halo
+    ctx.fillRect(sunX - 120, sunY - 120, 240, 240)
+    ctx.fillStyle = 'rgba(255,250,235,0.95)'
+    ctx.beginPath()
+    ctx.arc(sunX, sunY, 26, 0, Math.PI * 2)
+    ctx.fill()
+
+    // 遠方沙丘(視差,最慢)
+    const duneBase = GROUND_Y - 6
+    const doff = dist * 0.12
+    ctx.fillStyle = '#e8cf98'
+    ctx.beginPath()
+    ctx.moveTo(0, duneBase)
+    for (let x = 0; x <= VIEW.W; x += 24) {
+      const y = duneBase - 24 - Math.sin((x + doff) * 0.006) * 22 - Math.sin((x + doff) * 0.013 + 1) * 9
+      ctx.lineTo(x, y)
+    }
+    ctx.lineTo(VIEW.W, duneBase)
+    ctx.closePath()
+    ctx.fill()
+
+    // 遠景泥磚城(重用第一關城屋,作沿途聚落與遠處的尼尼微)
+    this._buildings(dist * 0.25)
+
+    // 沙地(地面)
+    const sand = ctx.createLinearGradient(0, GROUND_Y - 6, 0, VIEW.H)
+    sand.addColorStop(0, '#dcc081')
+    sand.addColorStop(1, '#c8a766')
+    ctx.fillStyle = sand
+    ctx.fillRect(0, GROUND_Y - 6, VIEW.W, VIEW.H - (GROUND_Y - 6))
+
+    // 土路 + 隨前進往左捲動的小石子刻痕(製造前進感)
+    ctx.fillStyle = '#b6925a'
+    ctx.fillRect(0, GROUND_Y, VIEW.W, 16)
+    ctx.fillStyle = 'rgba(120,92,52,0.55)'
+    const tick = 64
+    const tshift = -(dist % tick)
+    for (let x = tshift; x < VIEW.W; x += tick) {
+      ctx.fillRect(x, GROUND_Y + 6, 14, 3)
+    }
+  }
+
+  // 尼尼微大城城門:兩座泥磚塔樓 + 中央拱門 + 城垛(用第一關城屋的泥磚色,讀作「極大的城」)
+  _ninevehGate(x) {
+    const ctx = this.ctx
+    const base = GROUND_Y + 8
+    const WALL = '#cdb892'
+    const SHADE = 'rgba(95,70,40,0.20)'
+    const DARK = 'rgba(60,42,22,0.85)'
+    const towerH = 150
+    const towerW = 40
+    const gap = 56 // 中央門洞寬
+    const top = base - towerH
+
+    // 左右塔樓
+    for (const side of [-1, 1]) {
+      const tx = x + side * (gap / 2 + towerW / 2) - towerW / 2
+      ctx.fillStyle = WALL
+      ctx.fillRect(tx, top, towerW, towerH)
+      ctx.fillStyle = SHADE
+      ctx.fillRect(tx + towerW * 0.62, top, towerW * 0.38, towerH)
+      // 塔頂城垛(鋸齒)
+      ctx.fillStyle = WALL
+      for (let k = 0; k < 3; k++) ctx.fillRect(tx + k * (towerW / 3), top - 10, towerW / 3 - 3, 10)
+      // 高窗
+      ctx.fillStyle = DARK
+      ctx.fillRect(tx + towerW / 2 - 4, top + 28, 8, 14)
+    }
+
+    // 中央門楣(連接兩塔)
+    const lintelY = top + 40
+    ctx.fillStyle = WALL
+    ctx.fillRect(x - gap / 2 - 2, lintelY, gap + 4, base - lintelY)
+    ctx.fillStyle = SHADE
+    ctx.fillRect(x - gap / 2 - 2, lintelY, gap + 4, 6)
+
+    // 拱形門洞(暗)
+    const doorTop = lintelY + 20
+    ctx.fillStyle = DARK
+    ctx.fillRect(x - gap / 2 + 6, doorTop, gap - 12, base - doorTop)
+    ctx.beginPath()
+    ctx.arc(x, doorTop, (gap - 12) / 2, Math.PI, 2 * Math.PI)
+    ctx.fill()
   }
 
   // 第二關「暴風雨」畫面:暗色天空、雨、起伏的海、隨傾角搖晃的船、閃電,以及撐住/危險條。
@@ -683,28 +792,37 @@ export class Renderer {
       }
     }
 
-    // 船價(收集到的 🪙)/ 上船門檻
-    const fareNeed = game.mode === 'walk' ? FARE.walk : FARE.run
-    ctx.fillStyle = game.coinsCollected >= fareNeed ? '#2f7a32' : '#5a3a16'
+    // 收集到的 🪙:第一關顯示「/ 船價門檻」(湊夠變綠);第四關無船價,只顯示分數
     ctx.font = '600 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textAlign = 'left'
     ctx.textBaseline = 'middle'
-    ctx.fillText(`🪙 ${game.coinsCollected} / ${fareNeed}`, game.mode === 'run' ? 156 : 28, 46)
+    const coinX = game.mode === 'run' ? 156 : 28
+    if (game.fareEnabled) {
+      const fareNeed = game.mode === 'walk' ? FARE.walk : FARE.run
+      ctx.fillStyle = game.coinsCollected >= fareNeed ? '#2f7a32' : '#5a3a16'
+      ctx.fillText(`🪙 ${game.coinsCollected} / ${fareNeed}`, coinX, 46)
+    } else {
+      ctx.fillStyle = '#7a5320'
+      ctx.fillText(`🪙 ${game.coinsCollected}`, coinX, 46)
+    }
 
-    // 漫步模式 / 回頭收集船價:底部操作提示
+    // 漫步模式 / 回頭收集船價:底部操作提示(終點用語由 hudLabels.short 決定,別寫死)
     if (game.mode === 'walk' || game.collectingFare) {
       ctx.fillStyle = 'rgba(40,50,64,0.75)'
       ctx.font = '600 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'bottom'
+      const goalWord = (game.hudLabels && game.hudLabels.short) || '終點'
       ctx.fillText(
-        '按住 →/右半 前進　·　←/左半 後退　·　輕點一下 跳　·　走到船邊過關',
+        `按住 →/右半 前進　·　←/左半 後退　·　輕點一下 跳　·　走到${goalWord}過關`,
         VIEW.W / 2,
         VIEW.H - 12
       )
     }
 
-    // 進度條(約帕 → 船)
+    // 進度條(起點 → 終點)——兩端文字由 game.hudLabels 決定:
+    //   單機=「約帕 → 往他施的船 ⛵」;嵌入(保羅大富翁)可傳通用「起點 → 終點 ⛵」,讓同一關卡被任何旅程重用。
+    const hud = game.hudLabels || { start: '約帕', goal: '往他施的船 ⛵' }
     const barW = 360
     const barH = 16
     const bx = (VIEW.W - barW) / 2
@@ -712,7 +830,7 @@ export class Renderer {
     ctx.fillStyle = 'rgba(255,255,255,0.7)'
     roundRect(ctx, bx, by, barW, barH, 8)
     ctx.fill()
-    const prog = Math.min(1, game.distance / RUN.goalDistance)
+    const prog = Math.min(1, game.distance / (game.goalDistance || RUN.goalDistance))
     ctx.fillStyle = '#2f9e44'
     roundRect(ctx, bx, by, barW * prog, barH, 8)
     ctx.fill()
@@ -720,9 +838,9 @@ export class Renderer {
     ctx.font = '600 16px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textBaseline = 'bottom'
     ctx.textAlign = 'left'
-    ctx.fillText('約帕', bx, by - 4)
+    ctx.fillText(hud.start, bx, by - 4)
     ctx.textAlign = 'right'
-    ctx.fillText('往他施的船 ⛵', bx + barW, by - 4)
+    ctx.fillText(hud.goal, bx + barW, by - 4)
 
     // 到了船邊但船價不足:紅色提示橫幅,引導回頭收集
     if (game.shortFare) {

@@ -8,7 +8,9 @@
     "dev": "vite",
     "build": "node scripts/bundle-static.mjs",
     "icons": "node scripts/gen-icons.mjs",
-    "serve:dist": "node scripts/serve-static.mjs"
+    "serve:dist": "node scripts/serve-static.mjs",
+    "test": "node scripts/smoke-test.mjs",
+    "test:offline": "node scripts/smoke-test.mjs --offline"
   },
   "devDependencies": {
     "sharp": "^0.34.5",

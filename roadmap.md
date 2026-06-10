@@ -23,23 +23,30 @@
 - 約拿書第 2 章禱告分 **5 段**:答對才點亮一盞「禱告之光」並前進;集滿 → 大魚把約拿吐在旱地(2:10)過關。
 - 內容(禱告詞+反思題)在 `scripture.js` 的 `LEVEL3.stations`;可調數值在 `config.js` 的 `FISH`。
 
+### 第四關 · 上岸往尼尼微(神給的第二次機會,`game.js` 的 `startNineveh`)
+- **重用第一關跑酷引擎**(同一套 RUN 物理 / 障礙 / 寶物 / 向量先知),只換主題與規則:
+  暖色晨光天空 + 遠方沙丘 + 沙地土路(`renderer.js` 的 `_bgNineveh`)、終點是**尼尼微大城門**(`_ninevehGate`)。
+- **無船價門檻**:往尼尼微是順服不是買船票,走到城門即過關(`fareEnabled=false`);這關漫步不出 NPC 長者(題庫是 1–2 章)。
+- 串接:大魚肚(L3)過關 → 「下一關 · 上岸往尼尼微」;經文/文案在 `scripture.js` 的 `LEVEL4`(拿 2:10–3:3),可調長度在 `config.js` 的 `NINEVEH.goalDistance`。
+
 ### 其他
+- **自動化煙霧測試**:`npm test`(問答 answer 索引、各關文案齊備、全檔語法、狀態機/嵌入契約)、`npm run test:offline`(再加 build + PWA 離線就緒)。零相依,見 `scripts/smoke-test.mjs` / skill `game-smoke-test`。
 - **手機橫向全螢幕**:直向蓋「請轉橫向」提示;觸控裝置點開始時請求全螢幕+鎖橫向(Android);iOS 走「加入主畫面」standalone。
 - 音效 + 背景音樂(`audio.js`,Web Audio 合成,零音檔)、🔊/⏸ 鈕。
 - **PWA**(manifest + 手寫 network-first `sw.js`,可安裝/離線)、`start-game.bat` 啟動器。
 - **已部署** Netlify(連 GitHub 自動部署):https://hfpc-jonah-game.netlify.app/(已修正 .webmanifest MIME、sw.js no-cache)。
 - **已被「保羅大富翁」桌遊嵌入當小遊戲**(第一關跑酷、第二關暴風雨)——見下方。
+- **PWA 已預快取整個 app shell**(`sw.js` 的 `CORE` 含 HTML/CSS/全部 ES 模組/圖示),安裝後可直接離線,不必先線上跑一輪。
 
 ---
 
 ## 🔜 真正待做(依優先)
 
-1. **離線煙霧測試**:手機安裝 → 關 Wi-Fi/行動網路 → 確認第一/二/三關都能玩。
-2. **實機微調**:第二關難度(`STORM`)、第三關手感(走的距離 `FISH.segment`、跳碰蠟燭高度 `FISH.candleY`、骨頭位置 `FISH.boneAt`)。
-3. **第四關 上岸 → 尼尼微**(跑酷,可重用第一關引擎)。
-4. **第五關 尼尼微傳道**(策略 + 對話)、**第六關 蓖麻樹**(反思 + 結局;小敵人可用神所安排的蟲 拿 4:7)。
-5. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。
-6. (可選)把**第三關大魚肚平台關做成「真嵌入小遊戲」**——目前它在桌遊裡是用棋盤原生問答站呈現(因為禱告問答是 DOM 選單流程,塞進嵌入模式 NullUI 會卡住)。要真嵌入需讓 React 彈窗接手禱告卡。
+1. **真實手機離線實測**:`npm run test:offline` 已自動驗證「build 可離線執行 + sw 預快取齊備」(目前全綠);但仍建議**裝一台手機 → 關 Wi-Fi/行動網路 → 確認第一~四關都能玩**(自動檢查證明「能離線載入」,不證明每關手感都對)。
+2. **實機微調**:第二關難度(`STORM`)、第三關手感(`FISH.segment` / `FISH.candleY` / `FISH.boneAt`)、第四關長度(`NINEVEH.goalDistance`)。
+3. **第五關 尼尼微傳道**(策略 + 對話)、**第六關 蓖麻樹**(反思 + 結局;小敵人可用神所安排的蟲 拿 4:7)。
+4. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。
+5. (可選)把**第三關大魚肚平台關做成「真嵌入小遊戲」**——目前它在桌遊裡是用棋盤原生問答站呈現(因為禱告問答是 DOM 選單流程,塞進嵌入模式 NullUI 會卡住)。要真嵌入需讓 React 彈窗接手禱告卡。
 
 ---
 
@@ -50,4 +57,4 @@
 - 詳見 `保羅大富翁/roadmap.md`。
 
 ## 相關 skill(`~/.claude/skills/`,**現已存在**)
-`arcade-game-kit`(即時 2D 引擎藍圖)、`embed-minigame`(把小遊戲嵌進 React 桌遊)、`add-challenge-station`(棋盤加挑戰站)、`roll-and-move-game`(大富翁引擎)、`game-content-validator`(內容驗證)、`real-geography-board`(真實經緯度底圖)。
+`arcade-game-kit`(即時 2D 引擎藍圖)、`bible-game-studio`(內容/神學慣例)、`embed-minigame`(把小遊戲嵌進 React 桌遊)、`add-challenge-station`(棋盤加挑戰站)、`roll-and-move-game`(大富翁引擎)、`game-content-validator`(內容驗證)、`game-smoke-test`(上課前煙霧測試,本專案 `npm test`)、`real-geography-board`(真實經緯度底圖)。
