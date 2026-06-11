@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE, FISH, NINEVEH, PREACH, GOURD, BOOST } from './config.js'
+import { VIEW, GROUND_Y, RUN, WALK, PLAYER, LIVES, INVULN_TIME, FARE, FISH, NINEVEH, PREACH, GOURD, BOOST, SPRINT } from './config.js'
 import { Player } from './player.js'
 import { Spawner } from './spawner.js'
 import { Renderer } from './renderer.js'
@@ -100,6 +100,8 @@ export class Game {
     this.collectingFare = false // 闖關到船邊但船價不足 → 暫時可自由移動回頭收集
     this.shortFare = false // 在船邊但船價不足(HUD 提示用)
     this.boostLeft = 0 // 撿到 ⚡ 後的衝刺剩餘秒數(config.BOOST)
+    this.sprintHold = 0 // 按住(螢幕/→)累計秒數;超過 SPRINT.holdDelay = 主動衝刺
+    this.sprinting = false // 主動衝刺中(renderer 畫速度線用)
     this.answeredCorrect = new Set() // 這趟已答對的題目索引,不再出給 NPC
   }
 
@@ -261,11 +263,19 @@ export class Game {
     if (this.boostLeft > 0) this.boostLeft = Math.max(0, this.boostLeft - dt)
     const boostMult = this.boostLeft > 0 ? BOOST.mult : 1
 
+    // 主動衝刺(闖關):手指按住螢幕不放 / 按住 →,超過 holdDelay 秒就持續加速。
+    // 輕點(很快放開)仍是跳,不會誤觸;與 ⚡ 同時只取較大倍率,不疊乘。
+    const holding = this.input.pointerDown || this.input.right
+    this.sprintHold = holding ? (this.sprintHold || 0) + dt : 0
+    this.sprinting =
+      this.mode === 'run' && !this.collectingFare && this.sprintHold >= SPRINT.holdDelay
+    const speedMult = Math.max(boostMult, this.sprinting ? SPRINT.mult : 1)
+
     if (this.mode === 'run' && !this.collectingFare) {
-      // 闖關:點畫面任意處(非暫停區)= 跳;世界自動向前並加速
+      // 闖關:點畫面任意處(非暫停區)= 跳;世界自動向前並加速;按住不放=衝刺
       if (press) wantJump = true
       const k = Math.min(1, this.distance / RUN.rampDistance)
-      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * boostMult
+      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * speedMult
     } else {
       // 漫步,或「闖關到船邊船價不足、暫時自由移動回頭收集」
       // 漫步:按住 →/畫面右半 = 前進,←/畫面左半 = 後退,輕點 = 跳;無時間壓力

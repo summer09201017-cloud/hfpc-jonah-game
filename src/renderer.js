@@ -107,8 +107,8 @@ export class Renderer {
       else this._emoji('⛵', goalX, GROUND_Y + 8, 120)
     }
 
-    // 衝刺中(撿到 ⚡):約拿身後拖出速度線,跑出「風馳」感
-    if (game.boostLeft > 0 && game.speed > 1) {
+    // 衝刺中(撿到 ⚡ 或按住衝刺):約拿身後拖出速度線,跑出「風馳」感
+    if ((game.boostLeft > 0 || game.sprinting) && game.speed > 1) {
       ctx.strokeStyle = 'rgba(255,214,90,0.55)'
       ctx.lineWidth = 3
       ctx.lineCap = 'round'
