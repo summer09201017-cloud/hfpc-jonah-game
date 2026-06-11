@@ -344,7 +344,7 @@ export class Renderer {
     }
 
     // 大船(以海面中央為軸,隨浪上下 + 依傾角旋轉;S=放大倍率)
-    const S = 1.35
+    const S = 1.5
     const cx = VIEW.W / 2
     const cy = seaY + 6 + Math.sin(t * 2) * 6 * calm
     ctx.save()
@@ -370,20 +370,33 @@ export class Renderer {
     }
     ctx.fillStyle = '#5e3717'
     ctx.fillRect(-122 * S, -9, 244 * S, 11) // 甲板邊
+    // 船尾欄杆(右舷,給抓欄杆的水手抓;兩根立柱+橫杆)
+    ctx.strokeStyle = '#4a2c12'
+    ctx.lineWidth = 5
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(168, -9)
+    ctx.lineTo(168, -42)
+    ctx.moveTo(138, -9)
+    ctx.lineTo(138, -42)
+    ctx.moveTo(130, -40)
+    ctx.lineTo(176, -40)
+    ctx.stroke()
     // 桅杆 + 帆(被風吹得鼓脹)
     ctx.fillStyle = '#5e3717'
-    ctx.fillRect(-5, -160, 10, 160)
+    ctx.fillRect(-6, -180, 12, 180)
     ctx.fillStyle = '#e8e2d0'
     ctx.beginPath()
-    ctx.moveTo(5, -152)
-    ctx.quadraticCurveTo(100, -106, 6, -38)
+    ctx.moveTo(6, -172)
+    ctx.quadraticCurveTo(112, -120, 7, -42)
     ctx.closePath()
     ctx.fill()
-    // 一群水手:跪求/禱告/抓欄杆/掌舵的船主(拿 1:5–6 水手懼怕、船主來叫約拿)
-    this._emoji('🧎', -132, -6, 38)
-    this._emoji('🙏', -78, -4, 36, 'alphabetic')
-    this._emoji('🧍', 96, -6, 38)
-    this._emoji('👨‍✈️', 142, -6, 38)
+    // 一群驚惶的水手(向量小人,古代短衣;拿 1:5 水手便懼怕、將貨物拋在海中;1:6 船主來)
+    this._sailor(-150, -9, 'kneel', t) // 跪下、雙手朝天哀求
+    this._sailor(-95, -9, 'pray', t) // 俯伏在甲板上禱告
+    this._sailor(-50, -9, 'toss', t) // 把貨物拋進海裡(1:5)
+    this._sailor(112, -9, 'grip', t) // 雙手死抓欄杆、身體被浪甩
+    this._sailor(62, -9, 'captain', t) // 古代船主:深紅長袍+頭巾,朝約拿焦急揮手(1:6)
     // 約拿:ride/cast 站船中間;thrown 已被拋出,不畫在甲板上
     if (s.phase !== 'thrown') {
       this._prophet(0, 2, t * 0.05, false)
@@ -971,6 +984,156 @@ export class Renderer {
     } else {
       ctx.fillText(`第 ${Math.min(idx + 1, total)} / ${total} 幕`, VIEW.W / 2, VIEW.H - 12)
     }
+  }
+
+  // 暴風雨中的水手(向量小人,古代短衣/長袍,動作隨時間慌張擺動)。
+  // pose: kneel=跪下雙手朝天哀求 / pray=俯伏禱告 / grip=雙手抓欄杆被浪甩 /
+  //       toss=把貨物拋進海(拿 1:5) / captain=古代船主長袍頭巾朝約拿揮手喊叫(拿 1:6)
+  _sailor(x, footY, pose, t) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.translate(x, footY)
+    const SKIN = '#e2b48c'
+    const BEARD = '#4a3520'
+    const limb = (x1, y1, x2, y2, color, w = 5) => {
+      ctx.strokeStyle = color
+      ctx.lineWidth = w
+      ctx.lineCap = 'round'
+      ctx.beginPath()
+      ctx.moveTo(x1, y1)
+      ctx.lineTo(x2, y2)
+      ctx.stroke()
+    }
+    const hand = (hx, hy) => {
+      ctx.fillStyle = SKIN
+      ctx.beginPath()
+      ctx.arc(hx, hy, 3.2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    const head = (hx, hy, r = 6, wrap = null) => {
+      ctx.fillStyle = SKIN
+      ctx.beginPath()
+      ctx.arc(hx, hy, r, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.fillStyle = BEARD // 鬍子(下半圈)
+      ctx.beginPath()
+      ctx.arc(hx, hy + 2, r - 1, 0.25 * Math.PI, 0.75 * Math.PI)
+      ctx.closePath()
+      ctx.fill()
+      if (wrap) {
+        ctx.fillStyle = wrap // 頭巾(上半圈)
+        ctx.beginPath()
+        ctx.arc(hx, hy, r + 1.4, Math.PI, 2 * Math.PI)
+        ctx.closePath()
+        ctx.fill()
+      }
+    }
+    // 短衣軀幹(四邊形):肩(sx,sy)到臀(hx,hy),寬 w
+    const tunic = (sx, sy, hx, hy, color, wTop = 11, wBot = 14) => {
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.moveTo(sx - wTop / 2, sy)
+      ctx.lineTo(sx + wTop / 2, sy)
+      ctx.lineTo(hx + wBot / 2, hy)
+      ctx.lineTo(hx - wBot / 2, hy)
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    if (pose === 'kneel') {
+      // 跪在甲板上,雙手朝天用力揮(哀求各人的神,拿 1:5)
+      const wave = Math.sin(t * 7) * 5
+      const COL = '#b0703a'
+      limb(2, -13, 9, -2, SKIN, 6) // 大腿(跪)
+      limb(9, -2, -4, 0, SKIN, 5) // 小腿折在地上
+      tunic(0, -30, 1, -12, COL)
+      limb(-1, -28, -11, -45 + wave, COL, 5) // 左臂高舉
+      hand(-11, -45 + wave)
+      limb(1, -28, 11, -47 - wave, COL, 5) // 右臂高舉
+      hand(11, -47 - wave)
+      head(0, -36)
+    } else if (pose === 'pray') {
+      // 俯伏低頭,雙手伏地禱告(身體隨禱告前後輕擺)
+      const rock = Math.sin(t * 4) * 2
+      const COL = '#6e8aa8'
+      limb(-4, -12, 3, -2, SKIN, 6)
+      limb(3, -2, -9, 0, SKIN, 5)
+      tunic(8 + rock, -20, -4, -11, COL, 10, 13) // 軀幹前傾
+      limb(8 + rock, -20, 19, -4, COL, 5) // 雙臂伏向甲板
+      limb(7 + rock, -19, 17, -3, COL, 5)
+      hand(19, -4)
+      hand(17, -3)
+      head(13 + rock, -22, 6) // 頭低低的
+    } else if (pose === 'grip') {
+      // 雙腳張開撐住、身體被浪甩、雙手死抓欄杆(欄杆橫杆在世界座標 y≈-40,相對這裡≈-31)
+      const sway = Math.sin(t * 6) * 4
+      const COL = '#7d8f55'
+      limb(0, -16, -9, 0, SKIN, 6) // 雙腿張開撐住
+      limb(0, -16, 9, 0, SKIN, 6)
+      tunic(-6 - sway, -32, 0, -14, COL) // 軀幹向左被甩
+      limb(-5 - sway, -30, 22, -31, COL, 5) // 雙臂拼命伸向右邊欄杆
+      limb(-6 - sway, -28, 30, -30, COL, 5)
+      hand(22, -31)
+      hand(30, -30)
+      head(-8 - sway, -38)
+    } else if (pose === 'toss') {
+      // 把貨物拋進海裡(拿 1:5):身體前傾朝左舷,貨箱循環飛出去
+      const COL = '#9a6a3c'
+      limb(0, -15, -9, 0, SKIN, 6)
+      limb(0, -15, 8, 0, SKIN, 6)
+      tunic(-7, -30, 0, -13, COL)
+      limb(-7, -29, -20, -27, COL, 5) // 雙臂伸向左前方(剛出手)
+      limb(-6, -27, -19, -23, COL, 5)
+      hand(-20, -27)
+      hand(-19, -23)
+      head(-9, -37)
+      // 飛出去的貨箱:從手邊拋物線落向左舷外(循環)
+      const p = (t * 0.9) % 1.4
+      if (p < 1) {
+        const bx = -24 - p * 52
+        const by = -28 + 44 * p * p
+        ctx.globalAlpha = p > 0.8 ? (1 - p) / 0.2 : 1
+        ctx.fillStyle = '#8a5a2a'
+        ctx.fillRect(bx - 6, by - 6, 12, 12)
+        ctx.strokeStyle = '#5e3a16'
+        ctx.lineWidth = 2
+        ctx.strokeRect(bx - 6, by - 6, 12, 12)
+        ctx.globalAlpha = 1
+      }
+    } else if (pose === 'captain') {
+      // 古代船主(拿 1:6):深紅長袍 + 白頭巾,朝約拿(左邊)焦急揮手喊「起來,求告你的神!」
+      const urge = Math.sin(t * 8) * 4
+      const ROBE = '#7b3b3b'
+      // 長袍(蓋到腳,看不到腿)
+      ctx.fillStyle = ROBE
+      ctx.beginPath()
+      ctx.moveTo(-6, -38)
+      ctx.lineTo(6, -38)
+      ctx.lineTo(11, 0)
+      ctx.lineTo(-11, 0)
+      ctx.closePath()
+      ctx.fill()
+      ctx.strokeStyle = '#c8a35a' // 腰帶
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.moveTo(-8, -22)
+      ctx.lineTo(8, -22)
+      ctx.stroke()
+      limb(-2, -34, -17, -42 + urge, ROBE, 5) // 朝約拿揮的手臂
+      hand(-17, -42 + urge)
+      limb(2, -34, 9, -24, ROBE, 5) // 另一手扠在腰邊
+      hand(9, -24)
+      head(0, -44, 6.5, '#ece5d3') // 白頭巾
+      // 急喊的「!」氣泡
+      ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(t * 5))
+      ctx.fillStyle = '#ffd9b0'
+      ctx.font = '700 16px sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('❗', -22, -56)
+      ctx.globalAlpha = 1
+    }
+    ctx.restore()
   }
 
   // 用 Canvas 直接畫一個「面向右、奔跑中的先知」。
