@@ -1,6 +1,6 @@
 # roadmap.md — 約拿闖關 (Jonah Game)
 
-> 對齊現況 **2026-06-10**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
+> 對齊現況 **2026-06-11**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
 > 線上版:**https://hfpc-jonah-game.netlify.app/** ・ GitHub:`summer09201017-cloud/hfpc-jonah-game`(branch `main`)。
 
 ---

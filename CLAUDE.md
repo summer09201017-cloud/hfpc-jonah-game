@@ -1,6 +1,6 @@
 # CLAUDE.md — 約拿闖關 (Jonah Game)
 
-給接手這個專案的 AI / 開發者讀。**先讀這頁(架構 / 地雷),狀態看 `roadmap.md`(已完成 vs 真正待做),玩法看 `README.md`。** 對齊現況(2026-06-10)。
+給接手這個專案的 AI / 開發者讀。**先讀這頁(架構 / 地雷),狀態看 `roadmap.md`(已完成 vs 真正待做),玩法看 `README.md`。** 對齊現況(2026-06-11)。
 
 ## 這是什麼
 
@@ -71,12 +71,12 @@ index.html / styles.css   外殼 + DOM 覆蓋層(選單用 DOM,遊戲畫面用 C
 src/
   main.js        進入點 + Service Worker 註冊/解除
   game.js        主迴圈 + 狀態機(title/playing/paused/win/lose/quiz/fish/preach/gourd)+ 關卡協調(L1 跑酷 / L2 暴風雨 / L3 大魚肚默想 / L4 上岸→尼尼微 跑酷(重用 L1 引擎) / L5 尼尼微傳道 對話 RPG / L6 蓖麻樹 反思結局 + 聖經問答)
-  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH、NINEVEH、PREACH、GOURD…)
+  config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH、NINEVEH、PREACH、GOURD、BOOST ⚡衝刺、SPRINT 按住衝刺…)
   scripture.js   ★ 各關經文與信息文案(LEVEL1~LEVEL6;LEVEL3/5/6 含 stations 站點;LEVEL1/4 含 hud 進度條地名)
   quiz.js        ★ 聖經問答題庫(漫步 NPC 長者 + 標題練習,約 22 題,約拿書 1–2)
   player.js      約拿:跳躍/重力/蹲下(crouching)、命中框
-  spawner.js     第一關世界:障礙、空中寶物(加權隨機)、小敵人、NPC 長者(漫步問答) 的生成與移動
-  storm.js       第二關「暴風雨」整關場景(平衡物理),自成一格
+  spawner.js     跑酷世界(L1/L4 共用):障礙、空中寶物(加權隨機,含 ⚡)、小敵人、NPC 長者;theme 'harbor'/'desert' 換陣容;needFare 回頭補生寶物
+  storm.js       第二關「暴風雨」整關場景(平衡物理),自成一格;phase ride→cast(拋約拿)→thrown(海平息)
   renderer.js    所有繪製:背景/角色(向量先知,含跳/蹲)/HUD/第二關(_drawStorm)/第三關(_drawFish)/第四關(_bgNineveh + _ninevehGate;L1/L4 共用跑酷繪製)/第五關(_drawPreach 大城街道)/第六關(_drawGourd 五幕場景:蓖麻生長枯萎/蟲/東風)
   input.js       原始輸入提供者(鍵盤 held:左右/下蹲 + 跳/暫停/靜音邊緣 + 指標),game 依模式詮釋
   ui.js          DOM 覆蓋層(標題/暫停/過關/失敗 + 聖經問答卡 + 大魚肚卡)+ 右上暫停/靜音鈕
