@@ -107,6 +107,21 @@ export class Renderer {
       else this._emoji('⛵', goalX, GROUND_Y + 8, 120)
     }
 
+    // 衝刺中(撿到 ⚡):約拿身後拖出速度線,跑出「風馳」感
+    if (game.boostLeft > 0 && game.speed > 1) {
+      ctx.strokeStyle = 'rgba(255,214,90,0.55)'
+      ctx.lineWidth = 3
+      ctx.lineCap = 'round'
+      for (let i = 0; i < 6; i++) {
+        const ly = GROUND_Y - 14 - i * 9 - Math.sin(dist * 0.05 + i) * 3
+        const lx = game.player.x - 34 - ((dist * 0.9 + i * 53) % 70)
+        ctx.beginPath()
+        ctx.moveTo(lx, ly)
+        ctx.lineTo(lx - 30, ly)
+        ctx.stroke()
+      }
+    }
+
     // 約拿(向先知,向右奔跑;受擊無敵時閃爍)
     const p = game.player
     const blink = p.invuln > 0 && Math.floor(p.invuln * 12) % 2 === 0
@@ -199,8 +214,8 @@ export class Renderer {
     ctx.closePath()
     ctx.fill()
 
-    // 遠景泥磚城(重用第一關城屋,作沿途聚落與遠處的尼尼微)
-    this._buildings(dist * 0.25)
+    // 沿途零星聚落(曠野不是城,房子要少;到了終點另有尼尼微大城門)
+    this._buildings(dist * 0.25, 0.28)
 
     // 沙地(地面)
     const sand = ctx.createLinearGradient(0, GROUND_Y - 6, 0, VIEW.H)
@@ -263,33 +278,55 @@ export class Renderer {
     ctx.fill()
   }
 
-  // 第二關「暴風雨」畫面:暗色天空、雨、起伏的海、隨傾角搖晃的船、閃電,以及撐住/危險條。
+  // 第二關「暴風雨」畫面:烏雲密布的天空、暴風大雨、起伏的海、大船與一群水手、
+  // 閃電、撐住/危險條;結尾 cast(等拋約拿)/ thrown(約拿入海、海平息)。
   _drawStorm(game) {
     const ctx = this.ctx
     const s = game.storm
     const t = s.time
+    // thrown 階段:海與雨隨進度平息(「海的狂浪就平息了」拿 1:15)
+    const calm = s.phase === 'thrown' ? 1 - 0.8 * Math.min(1, s.thrownT / 1.4) : 1
 
-    // 暗色暴風天空
+    // 烏雲密布的暴風天空(thrown 末段微微透光)
+    const lift = (1 - calm) * 0.5
     const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
-    sky.addColorStop(0, '#1b2733')
-    sky.addColorStop(0.6, '#33414f')
+    sky.addColorStop(0, lift > 0.2 ? '#2c3b49' : '#141d26')
+    sky.addColorStop(0.6, lift > 0.2 ? '#41505e' : '#2c3a47')
     sky.addColorStop(1, '#44535f')
     ctx.fillStyle = sky
     ctx.fillRect(0, 0, VIEW.W, VIEW.H)
 
-    // 雨
-    ctx.strokeStyle = 'rgba(185,205,225,0.35)'
-    ctx.lineWidth = 2
-    for (let i = 0; i < 70; i++) {
-      const x = ((i * 137 + t * 640) % (VIEW.W + 40)) - 20
-      const y = ((i * 89 + t * 920) % (VIEW.H + 40)) - 20
-      ctx.beginPath()
-      ctx.moveTo(x, y)
-      ctx.lineTo(x - 6, y + 16)
-      ctx.stroke()
+    // 低垂的烏雲(兩層團塊,緩慢漂移;用雜湊定形不閃爍)
+    const cloudLayer = (speed, y0, rgba, scale) => {
+      ctx.fillStyle = rgba
+      for (let i = 0; i < 8; i++) {
+        const w = (90 + ((i * 53) % 70)) * scale
+        const x = ((i * 173 + t * speed) % (VIEW.W + 260)) - 130
+        const y = y0 + ((i * 37) % 26)
+        ctx.beginPath()
+        ctx.ellipse(x, y, w, 26 * scale, 0, 0, Math.PI * 2)
+        ctx.ellipse(x + w * 0.55, y + 8, w * 0.7, 20 * scale, 0, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+    cloudLayer(14, 26, 'rgba(16,24,32,0.85)', 1.15)
+    cloudLayer(26, 64, 'rgba(30,40,50,0.7)', 0.9)
+
+    // 暴風大雨(密、斜、快;thrown 時隨海平息漸停)
+    if (calm > 0.15) {
+      ctx.strokeStyle = `rgba(185,205,225,${0.42 * calm})`
+      ctx.lineWidth = 2.5
+      for (let i = 0; i < 130; i++) {
+        const x = ((i * 137 + t * 860) % (VIEW.W + 60)) - 30
+        const y = ((i * 89 + t * 1150) % (VIEW.H + 60)) - 30
+        ctx.beginPath()
+        ctx.moveTo(x, y)
+        ctx.lineTo(x - 9, y + 24)
+        ctx.stroke()
+      }
     }
 
-    // 海(深色、起伏的浪)
+    // 海(深色、起伏的浪;thrown 時浪高漸平)
     const seaY = GROUND_Y - 40
     ctx.fillStyle = '#23506e'
     ctx.fillRect(0, seaY, VIEW.W, VIEW.H - seaY)
@@ -299,49 +336,129 @@ export class Renderer {
       const yy = seaY + 18 + k * 30
       ctx.beginPath()
       for (let x = 0; x <= VIEW.W; x += 16) {
-        const off = Math.sin(x * 0.02 + t * 3 + k) * 10
+        const off = Math.sin(x * 0.02 + t * 3 + k) * 10 * calm
         if (x === 0) ctx.moveTo(x, yy + off)
         else ctx.lineTo(x, yy + off)
       }
       ctx.stroke()
     }
 
-    // 船(以海面中央為軸,隨浪上下 + 依傾角旋轉)
+    // 大船(以海面中央為軸,隨浪上下 + 依傾角旋轉;S=放大倍率)
+    const S = 1.35
     const cx = VIEW.W / 2
-    const cy = seaY + 6 + Math.sin(t * 2) * 6
+    const cy = seaY + 6 + Math.sin(t * 2) * 6 * calm
     ctx.save()
     ctx.translate(cx, cy)
     ctx.rotate(s.tilt)
     // 船身
     ctx.fillStyle = '#7a4a22'
     ctx.beginPath()
-    ctx.moveTo(-122, 0)
-    ctx.lineTo(122, 0)
-    ctx.lineTo(86, 56)
-    ctx.lineTo(-86, 56)
+    ctx.moveTo(-122 * S, 0)
+    ctx.lineTo(122 * S, 0)
+    ctx.lineTo(86 * S, 56 * S)
+    ctx.lineTo(-86 * S, 56 * S)
     ctx.closePath()
     ctx.fill()
+    // 船身木板紋
+    ctx.strokeStyle = 'rgba(60,35,16,0.5)'
+    ctx.lineWidth = 2
+    for (let k = 1; k <= 2; k++) {
+      ctx.beginPath()
+      ctx.moveTo((-122 + 12 * k) * S, 18 * k)
+      ctx.lineTo((122 - 12 * k) * S, 18 * k)
+      ctx.stroke()
+    }
     ctx.fillStyle = '#5e3717'
-    ctx.fillRect(-122, -9, 244, 11) // 甲板邊
-    // 桅杆 + 帆
+    ctx.fillRect(-122 * S, -9, 244 * S, 11) // 甲板邊
+    // 桅杆 + 帆(被風吹得鼓脹)
     ctx.fillStyle = '#5e3717'
-    ctx.fillRect(-4, -122, 8, 122)
+    ctx.fillRect(-5, -160, 10, 160)
     ctx.fillStyle = '#e8e2d0'
     ctx.beginPath()
-    ctx.moveTo(4, -116)
-    ctx.quadraticCurveTo(74, -82, 8, -30)
+    ctx.moveTo(5, -152)
+    ctx.quadraticCurveTo(100, -106, 6, -38)
     ctx.closePath()
     ctx.fill()
-    // 船員 + 約拿
-    this._emoji('🧎', -64, -6, 36)
-    this._emoji('🙏', 66, -4, 34, 'alphabetic')
-    this._prophet(0, 2, t * 0.05, false) // 約拿站中間
+    // 一群水手:跪求/禱告/抓欄杆/掌舵的船主(拿 1:5–6 水手懼怕、船主來叫約拿)
+    this._emoji('🧎', -132, -6, 38)
+    this._emoji('🙏', -78, -4, 36, 'alphabetic')
+    this._emoji('🧍', 96, -6, 38)
+    this._emoji('👨‍✈️', 142, -6, 38)
+    // 約拿:ride/cast 站船中間;thrown 已被拋出,不畫在甲板上
+    if (s.phase !== 'thrown') {
+      this._prophet(0, 2, t * 0.05, false)
+      if (s.phase === 'cast') {
+        // 等拋:約拿身上一圈呼吸光暈,標示「就是他」
+        const pr = 40 + Math.sin(t * 5) * 6
+        ctx.strokeStyle = 'rgba(255,224,140,0.85)'
+        ctx.lineWidth = 4
+        ctx.beginPath()
+        ctx.arc(0, -28, pr, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+    }
     ctx.restore()
+
+    // thrown:約拿從船上劃出拋物線落海 + 水花漣漪(他沉下去——大魚在下一關等他)
+    if (s.phase === 'thrown') {
+      const f = Math.min(1, s.thrownT / 1.1) // 飛行進度
+      const x0 = cx
+      const y0 = cy - 36
+      const x1 = cx + 235
+      const y1 = seaY + 46
+      const jx = x0 + (x1 - x0) * f
+      const jy = y0 + (y1 - y0) * f - 120 * Math.sin(Math.PI * f)
+      if (f < 1) {
+        ctx.save()
+        ctx.translate(jx, jy)
+        ctx.rotate(f * 2.4) // 翻滾著落下
+        this._prophet(0, 28, 0, true)
+        ctx.restore()
+      } else {
+        // 落水:水花 + 擴散漣漪
+        const k = Math.min(1, (s.thrownT - 1.1) / 0.8)
+        if (k < 0.55) this._emoji('💦', x1, y1 - 8, 44 + k * 30, 'middle')
+        ctx.strokeStyle = `rgba(220,240,250,${0.7 * (1 - k)})`
+        ctx.lineWidth = 3
+        for (let r = 0; r < 2; r++) {
+          ctx.beginPath()
+          ctx.ellipse(x1, y1 + 6, 26 + k * 90 + r * 18, 7 + k * 18, 0, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+      }
+    }
 
     // 閃電白光
     if (s.flash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${s.flash * 0.4})`
       ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+    }
+
+    // ---- 結尾階段的提示 ----
+    if (s.phase === 'cast') {
+      // 等玩家把約拿拋進海:經文 + 大提示(脈動)
+      ctx.textAlign = 'center'
+      ctx.fillStyle = 'rgba(8,20,30,0.55)'
+      roundRect(ctx, VIEW.W / 2 - 330, 30, 660, 92, 14)
+      ctx.fill()
+      ctx.fillStyle = '#ffe9b0'
+      ctx.font = '700 22px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('「你們將我抬起來,拋在海中,海就平靜了。」(拿 1:12)', VIEW.W / 2, 58)
+      ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(t * 4))
+      ctx.fillStyle = '#fff'
+      ctx.font = '800 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.fillText('👉 輕點畫面(或按 空白鍵)把約拿拋進海裡', VIEW.W / 2, 98)
+      ctx.globalAlpha = 1
+      return
+    }
+    if (s.phase === 'thrown') {
+      ctx.textAlign = 'center'
+      ctx.fillStyle = 'rgba(235,244,255,0.9)'
+      ctx.font = '700 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.fillText('海的狂浪,就平息了。(拿 1:15)', VIEW.W / 2, 54)
+      return
     }
 
     // 撐過風暴進度條
@@ -1054,7 +1171,8 @@ export class Renderer {
 
   // 古代(約三千年前)近東港城的房子:平頂、女兒牆、曬乾的泥磚/砂岩色,
   // 窗戶很少(0–2 個小高窗)、底部一個拱門,偶爾一座圓頂。用雜湊讓外觀穩定不閃爍。
-  _buildings(off) {
+  // density 0..1:出現機率(1=連綿大城;0.3≈曠野零星聚落,同一位置永遠一致不閃爍)。
+  _buildings(off, density = 1) {
     const ctx = this.ctx
     const base = GROUND_Y - 8
     const WALL = ['#d8c5a0', '#cdb892', '#e2d4b2', '#c9b48a'] // 陽光曬過的泥磚色
@@ -1068,6 +1186,7 @@ export class Renderer {
     const start = -((((off % step) + step) % step))
     for (let x = start; x < VIEW.W + step; x += step) {
       const key = Math.round((x + off) / step)
+      if (density < 1 && hash(key * 3.7 + 11) > density) continue // 曠野:大多數格子留空
       const r = hash(key)
       const r2 = hash(key * 2.3 + 7)
       const r3 = hash(key * 5.1 + 3)
@@ -1138,6 +1257,18 @@ export class Renderer {
     } else {
       ctx.fillStyle = '#7a5320'
       ctx.fillText(`🪙 ${game.coinsCollected}`, coinX, 46)
+    }
+
+    // 衝刺剩餘秒數(撿到 ⚡ 時顯示在金幣旁)
+    if (game.boostLeft > 0) {
+      ctx.fillStyle = '#c47f0a'
+      ctx.font = '700 22px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      const bx0 = (game.mode === 'run' ? 156 : 28) + 150
+      ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(game.boostLeft * 6))
+      ctx.fillText(`⚡ ${game.boostLeft.toFixed(1)}s`, bx0, 46)
+      ctx.globalAlpha = 1
     }
 
     // 漫步模式 / 回頭收集船價:底部操作提示(終點用語由 hudLabels.short 決定,別寫死)
