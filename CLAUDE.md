@@ -111,6 +111,7 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
 ## 相關 skill(`~/.claude/skills/`)
 
 - `arcade-game-kit` — 做可嵌入、零相依的即時 2D Canvas 小遊戲(本遊戲的藍圖)。
+- `game-art-upgrade` — 占位美術(emoji/向量)→ 真圖(Kenney CC0 + AI 產圖)的漸進增強換法;本遊戲 `assets.js` 即其活範例。
 - `bible-game-studio` — 聖經遊戲系列的內容/神學/慣例知識庫(關卡對應、和合本引用、改革宗口吻)。
 - `embed-minigame` — 把這種小遊戲嵌進 React 桌遊(已用於保羅大富翁)。
 - `add-challenge-station` — 在桌遊棋盤加觸發小遊戲的挑戰站。
