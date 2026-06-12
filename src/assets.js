@@ -4,13 +4,10 @@
 // 嵌入但宿主沒放 /assets/sprites/)都會自動退回 emoji,單機與嵌入行為不會壞。
 // 想再換一張圖:只要改這份對照表,不用動 renderer / spawner。
 
+// 牧師審美定案(2026-06-12):只留老鼠與木箱——其餘(金幣/愛心/圓木/岩石/仙人掌)
+// emoji 本來就比較好看,已退回。要再試新圖:放 PNG 進 public/assets/sprites/ 後加一行。
 const FILES = {
-  '🪙': 'coin.png', // 船價金幣(寶物,最常見)
-  '❤️': 'heart.png', // 補命
   '📦': 'crate.png', // 港口木箱(障礙)
-  '🪵': 'logs.png', // 圓木(障礙)
-  '🪨': 'rock.png', // 曠野岩石(障礙)
-  '🌵': 'cactus.png', // 曠野仙人掌(障礙)
   '🐀': 'mouse.png', // 港口老鼠(漫步小敵人)
 }
 

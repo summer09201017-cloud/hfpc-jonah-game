@@ -70,8 +70,10 @@
 1. **真實手機離線實測**:`npm run test:offline` 已自動驗證「build 可離線執行 + sw 預快取齊備」(目前全綠);但仍建議**裝一台手機 → 關 Wi-Fi/行動網路 → 確認六關都能玩**(自動檢查證明「能離線載入」,不證明每關手感都對)。
 2. **實機微調**:第二關難度(`STORM`)、第三關手感(`FISH.*`)、第四關長度(`NINEVEH.goalDistance`)、第五關步調(`PREACH.*`)、第六關每幕節奏(`GOURD.sceneTime`)。
 3. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。
-   **第一批已完成(2026-06-12,branch `art-kenney-sprites`,待牧師實測)**:Kenney CC0
-   (new-platformer-pack)換掉 🪙❤️📦🪵🪨🌵🐀 七種——`public/assets/sprites/` 放圖、
+   **第一批已做完並經牧師審美定案(2026-06-12,branch `art-kenney-sprites`)**:試了 Kenney CC0
+   七種,**只留 📦木箱 + 🐀老鼠**(牧師:金幣/愛心/圓木的 emoji 本來就比較好看,已退回;
+   **教訓:高 DPI 彩色 emoji 本身就是不錯的美術,真圖不見得是升級,之後換圖先截圖比對再定案**)。
+   機制保留:`public/assets/sprites/` 放圖、
    `src/assets.js` 是 emoji→圖 對照表、`renderer._emoji` 有圖畫圖、沒圖照舊畫 emoji(嵌入端
    圖檔 404 也只是退回 emoji,不會壞)。**還沒換**:🏺📜🕊️⚡🛢️🧺🪜、🐍🦂🦀(Kenney 無側視
    對應)、L1 終點 ⛵ 與 L2 大船(pirate-pack 是**俯視**圖,側視世界不能用;要補得靠 AI 產圖
