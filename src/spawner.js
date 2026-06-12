@@ -152,7 +152,7 @@ export class Spawner {
       }
     }
 
-    // ---- NPC(只在第一關漫步模式;走近觸發聖經問答,沒有時間壓力)----
+    // ---- NPC(第一關/第四關的漫步模式;走近觸發聖經問答,沒有時間壓力)----
     if (npcsOn) {
       this.distSinceNpc += dx
       if (spawning && this.distSinceNpc >= this.nextNpcGap) {

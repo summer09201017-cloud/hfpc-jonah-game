@@ -26,7 +26,7 @@ export class UI {
       const act = ds.act
       if (act === 'start' && this._start) this._start(ds.mode || 'run')
       else if (act === 'storm' && this._storm) this._storm()
-      else if (act === 'nineveh' && this._nineveh) this._nineveh()
+      else if (act === 'nineveh' && this._nineveh) this._nineveh(ds.mode || 'run')
       else if (act === 'restart' && this._restart) this._restart()
       else if (act === 'resume' && this._resume) this._resume()
       else if (act === 'next' && this._next) this._next()
@@ -138,7 +138,8 @@ export class UI {
       <div class="row">
         <button class="btn ghost" data-act="storm">🌊 第二關 · 暴風雨</button>
         <button class="btn ghost" data-act="fish-start">🐋 第三關 · 大魚肚</button>
-        <button class="btn ghost" data-act="nineveh">🏙️ 第四關 · 上岸往尼尼微</button>
+        <button class="btn ghost" data-act="nineveh" data-mode="run">🏙️ 第四關 · 上岸往尼尼微</button>
+        <button class="btn ghost" data-act="nineveh" data-mode="walk">🚶 第四關 · 漫步問答</button>
         <button class="btn ghost" data-act="preach-start">📣 第五關 · 尼尼微傳道</button>
         <button class="btn ghost" data-act="gourd-start">🌿 第六關 · 蓖麻樹</button>
       </div>

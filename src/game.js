@@ -6,7 +6,7 @@ import { Input } from './input.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6 } from './scripture.js'
-import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
+import { QUESTIONS, pickQuestions, quizRemark, npcPoolForLevel } from './quiz.js'
 
 const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach', GOURD: 'gourd' }
 const STEP = 1 / 60 // 固定時間步長,讓物理在任何更新率下都一致
@@ -74,7 +74,7 @@ export class Game {
 
     this.ui.onStart((mode) => this.start(mode))
     this.ui.onStorm(() => this.startStorm()) // 標題上直接挑第二關
-    this.ui.onNineveh(() => this.startNineveh('run')) // 標題上直接挑第四關(方便試玩/示範)
+    this.ui.onNineveh((mode) => this.startNineveh(mode)) // 標題直接挑第四關(闖關/漫步;漫步有長者問答)
     this.ui.onRestart(() => this.restartCurrent()) // 重玩目前這一關
     this.ui.onNext(() => this.next()) // 進入下一關
     this.ui.onPause(() => this.pause())
@@ -310,8 +310,10 @@ export class Game {
     }
 
     this.player.update(dt)
-    // NPC 長者問答只在第一關(題庫是約拿書 1–2 章);第四關漫步不出長者。
-    const npcsOn = this.mode === 'walk' && this.level === 1
+    // NPC 長者問答:第一關(港口)與第四關(往尼尼微路上)的漫步模式才出。
+    // 出題範圍依劇情進度(quiz.js 的 npcPoolForLevel:L1 出 1–2 章、L4 出 1–3 章非爆雷題)。
+    // 嵌入模式一律不出——宿主(保羅大富翁)的 EmbedUI 沒實作問答卡,出了會卡在原地。
+    const npcsOn = !this.embed && this.mode === 'walk' && (this.level === 1 || this.level === 4)
     // 敵人:漫步模式都有;第四關曠野連闖關模式也有(🐍🦂,撞到扣命、踩扁加分)
     const enemiesOn = this.mode === 'walk' || this.level === 4
     // 回頭收集船價中(船價不足且可後退):往後走時從左邊補生寶物,不會回頭撲空
@@ -555,10 +557,10 @@ export class Game {
     this._showCurrentQuestion()
   }
 
-  // 從「這趟還沒答對」的題目挑一題(盡量不連續出同一題);沒得出回 -1
+  // 從「這關可出題範圍內、這趟還沒答對」的題目挑一題(盡量不連續出同一題);沒得出回 -1
   _pickNpcQuestion(npc) {
     const pool = []
-    for (let i = 0; i < QUESTIONS.length; i++) {
+    for (const i of npcPoolForLevel(this.level)) {
       if (!this.answeredCorrect.has(i)) pool.push(i)
     }
     if (pool.length === 0) return -1
