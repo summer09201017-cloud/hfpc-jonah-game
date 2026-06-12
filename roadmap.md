@@ -70,6 +70,12 @@
 1. **真實手機離線實測**:`npm run test:offline` 已自動驗證「build 可離線執行 + sw 預快取齊備」(目前全綠);但仍建議**裝一台手機 → 關 Wi-Fi/行動網路 → 確認六關都能玩**(自動檢查證明「能離線載入」,不證明每關手感都對)。
 2. **實機微調**:第二關難度(`STORM`)、第三關手感(`FISH.*`)、第四關長度(`NINEVEH.goalDistance`)、第五關步調(`PREACH.*`)、第六關每幕節奏(`GOURD.sceneTime`)。
 3. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。
+   **第一批已完成(2026-06-12,branch `art-kenney-sprites`,待牧師實測)**:Kenney CC0
+   (new-platformer-pack)換掉 🪙❤️📦🪵🪨🌵🐀 七種——`public/assets/sprites/` 放圖、
+   `src/assets.js` 是 emoji→圖 對照表、`renderer._emoji` 有圖畫圖、沒圖照舊畫 emoji(嵌入端
+   圖檔 404 也只是退回 emoji,不會壞)。**還沒換**:🏺📜🕊️⚡🛢️🧺🪜、🐍🦂🦀(Kenney 無側視
+   對應)、L1 終點 ⛵ 與 L2 大船(pirate-pack 是**俯視**圖,側視世界不能用;要補得靠 AI 產圖
+   `gen-sprites-gemini.mjs`,素材與腳本在 Downloads `美術素材-CC0-2026-06-12\美術素材-CC0`)。
 4. (可選)約拿路線地圖改真實「尼尼微 → 地中海」(用 real-geography-board)。
 
 > 🚀 **未來功能點子(跨兩專案,按 CP 值排序)見 `讀我-HANDOFF.txt` 的「下一步建議」**。

@@ -73,6 +73,8 @@ src/
   game.js        主迴圈 + 狀態機(title/playing/paused/win/lose/quiz/fish/preach/gourd)+ 關卡協調(L1 跑酷 / L2 暴風雨 / L3 大魚肚默想 / L4 上岸→尼尼微 跑酷(重用 L1 引擎) / L5 尼尼微傳道 對話 RPG / L6 蓖麻樹 反思結局 + 聖經問答)
   config.js      ★ 所有可調數值(速度、重力、關長、WALK、STORM、FARE 船價、FISH、NINEVEH、PREACH、GOURD、BOOST ⚡衝刺、SPRINT 按住衝刺…)
   scripture.js   ★ 各關經文與信息文案(LEVEL1~LEVEL6;LEVEL3/5/6 含 stations 站點;LEVEL1/4 含 hud 進度條地名)
+  assets.js      ★ 真實美術對照表(emoji → public/assets/sprites/ 的 Kenney CC0 PNG);renderer._emoji
+                 有圖畫圖、沒圖(載入中/404)退回 emoji——嵌入端不放圖也不會壞;想換圖只改這份表
   quiz.js        ★ 聖經問答題庫(漫步 NPC 長者 + 標題練習,約 22 題,約拿書 1–2)
   player.js      約拿:跳躍/重力/蹲下(crouching)、命中框
   spawner.js     跑酷世界(L1/L4 共用):障礙、空中寶物(加權隨機,含 ⚡)、小敵人、NPC 長者;theme 'harbor'/'desert' 換陣容;needFare 回頭補生寶物

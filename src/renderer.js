@@ -1,4 +1,5 @@
 import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD } from './config.js'
+import { sprite } from './assets.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -38,6 +39,14 @@ export class Renderer {
 
   _emoji(e, x, y, size, baseline = 'alphabetic') {
     const ctx = this.ctx
+    // 有對應的真圖(Kenney sprite)就畫圖;沒有(或還沒載好)照舊畫 emoji。
+    // 對齊規則跟 emoji 一樣:middle = 以 y 為中心;alphabetic = 底邊貼在 y。
+    const img = sprite(e)
+    if (img) {
+      const top = baseline === 'middle' ? y - size / 2 : y - size
+      ctx.drawImage(img, x - size / 2, top, size, size)
+      return
+    }
     ctx.font = `${size}px "Segoe UI Emoji","Apple Color Emoji",serif`
     ctx.textAlign = 'center'
     ctx.textBaseline = baseline
