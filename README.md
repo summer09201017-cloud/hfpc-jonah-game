@@ -12,6 +12,8 @@ npm run dev      # 啟動 Vite dev server(通常是 http://localhost:5173/,被�
 ```
 
 - 一般使用者:**雙擊 `start-game.bat`**(自動找空埠 + 開瀏覽器;伺服器跑在同一視窗,關掉即停)。
+- 🆕 **戰爭闖關原型試玩**(2026-06-13,開發中,一般玩家看不到):dev 啟動後開
+  `http://localhost:<埠>/?level=moses` 玩「摩西舉手之戰」(出 17)。詳見 `讀我-HANDOFF.txt`。
 
 ## 怎麼建置 / 部署
 

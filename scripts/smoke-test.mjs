@@ -31,7 +31,7 @@ const CONFIG = {
   // 內容模組(純 ESM 資料、不碰 DOM),會被 import 後逐項驗證
   quizModule: 'src/quiz.js', // 需 export QUESTIONS[]
   scriptureModule: 'src/scripture.js', // 需 export LEVEL1..n
-  levels: ['LEVEL1', 'LEVEL2', 'LEVEL3', 'LEVEL4', 'LEVEL5', 'LEVEL6'],
+  levels: ['LEVEL1', 'LEVEL2', 'LEVEL3', 'LEVEL4', 'LEVEL5', 'LEVEL6', 'MOSES', 'REDSEA'],
 
   // 狀態機 / 嵌入契約:對 game.js 原始碼做字串斷言
   gameModule: 'src/game.js',

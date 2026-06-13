@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD, MOSES } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -51,6 +51,11 @@ export class Renderer {
     // 第二關「暴風雨」是另一個畫面
     if (game.level === 2) {
       this._drawStorm(game)
+      return
+    }
+    // 戰爭闖關原型「摩西舉手」(出 17)也是另一個畫面
+    if (game.level === 7) {
+      this._drawMoses(game)
       return
     }
     // 第三關「大魚肚內」也是另一個畫面
@@ -544,6 +549,339 @@ export class Renderer {
     ctx.textAlign = 'center'
     ctx.textBaseline = 'bottom'
     ctx.fillText('順著亮起的箭頭按 ← → (或點畫面左右兩側) 扶正船身', VIEW.W / 2, VIEW.H - 14)
+  }
+
+  // 戰爭闖關原型「摩西舉手之戰」(出 17:8–13)畫面:
+  //   山頂的摩西(雙手依 armDrop 高舉/垂下,手握神的杖)、左右的亞倫與戶珥(扶手時舉起內側手 + 光暈)、
+  //   山下的谷中戰場(以色列 vs 亞瑪力,前線隨 defeat 推移)、太陽=計時(從高空走到地平=日落=過關)、
+  //   上方兩條 HUD(手的力量 / 戰況)+ 亞倫戶珥可用度條 + 提示文字。山下小兵用色塊火柴人(驗證關不細雕)。
+  _drawMoses(game) {
+    const ctx = this.ctx
+    const m = game.moses
+    const prog = Math.min(1, m.survival / MOSES.duration)
+    const t = m.time
+
+    // ---- 天空:從清晨藍 → 黃昏橙紅(隨日落進度)----
+    const lerp = (a, b, k) => a + (b - a) * k
+    const mix = (c1, c2, k) => `rgb(${Math.round(lerp(c1[0], c2[0], k))},${Math.round(lerp(c1[1], c2[1], k))},${Math.round(lerp(c1[2], c2[2], k))})`
+    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    sky.addColorStop(0, mix([120, 180, 222], [60, 38, 78], prog)) // 高空
+    sky.addColorStop(0.55, mix([180, 214, 240], [214, 110, 70], prog))
+    sky.addColorStop(1, mix([226, 240, 250], [250, 186, 120], prog)) // 近地平
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    // ---- 太陽 = 計時:從左上走到右側地平線(日落) ----
+    const sunX = lerp(VIEW.W * 0.16, VIEW.W * 0.84, prog)
+    const horizonY = GROUND_Y - 40
+    const sunY = lerp(VIEW.H * 0.16, horizonY, prog)
+    const halo = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 110)
+    halo.addColorStop(0, mix([255, 244, 210], [255, 210, 150], prog).replace('rgb', 'rgba').replace(')', ',0.95)'))
+    halo.addColorStop(1, 'rgba(255,230,180,0)')
+    ctx.fillStyle = halo
+    ctx.fillRect(sunX - 110, sunY - 110, 220, 220)
+    ctx.fillStyle = mix([255, 248, 224], [255, 188, 120], prog)
+    ctx.beginPath()
+    ctx.arc(sunX, sunY, 30, 0, Math.PI * 2)
+    ctx.fill()
+
+    // ---- 遠山(視差,暖色剪影)----
+    ctx.fillStyle = mix([150, 170, 150], [120, 80, 90], prog)
+    ctx.beginPath()
+    ctx.moveTo(0, horizonY)
+    for (let x = 0; x <= VIEW.W; x += 30) {
+      const y = horizonY - 30 - Math.sin(x * 0.008 + 1) * 26 - Math.sin(x * 0.02) * 10
+      ctx.lineTo(x, y)
+    }
+    ctx.lineTo(VIEW.W, horizonY)
+    ctx.closePath()
+    ctx.fill()
+
+    // ---- 谷中戰場(地面 + 兩軍 + 前線隨 defeat 推移) ----
+    ctx.fillStyle = mix([196, 168, 110], [150, 96, 70], prog)
+    ctx.fillRect(0, horizonY, VIEW.W, VIEW.H - horizonY)
+    // 前線 x:defeat 大 → 戰線被推向以色列(左);defeat 小 → 推向亞瑪力(右)
+    const frontX = lerp(VIEW.W * 0.30, VIEW.W * 0.70, 1 - m.defeat)
+    const soldiersY = horizonY + 30
+    // 一排小兵(色塊火柴人)
+    const army = (x0, x1, color, n) => {
+      ctx.fillStyle = color
+      for (let i = 0; i < n; i++) {
+        const x = lerp(x0, x1, n === 1 ? 0.5 : i / (n - 1))
+        const bob = Math.sin(t * 6 + i * 1.7) * 2
+        ctx.fillRect(x - 3, soldiersY - 18 + bob, 6, 18) // 身
+        ctx.beginPath()
+        ctx.arc(x, soldiersY - 22 + bob, 4, 0, Math.PI * 2) // 頭
+        ctx.fill()
+        // 兵器(小斜線)
+        ctx.strokeStyle = color
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(x + (x0 < x1 ? 4 : -4), soldiersY - 16 + bob)
+        ctx.lineTo(x + (x0 < x1 ? 12 : -12), soldiersY - 28 + bob)
+        ctx.stroke()
+      }
+    }
+    const ISRAEL = '#3a5a8c' // 以色列=藍
+    const AMALEK = '#9c3b3b' // 亞瑪力=紅
+    army(VIEW.W * 0.06, frontX - 26, ISRAEL, 6) // 以色列(藍,左,朝右)
+    army(VIEW.W * 0.94, frontX + 26, AMALEK, 6) // 亞瑪力(紅,右,朝左)
+
+    // 兩軍標籤(顏色↔是誰,讓人一看就懂):左藍=以色列、右紅=亞瑪力
+    ctx.font = '700 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'
+    const tag = (label, color, cx) => {
+      const w = ctx.measureText(label).width + 26
+      ctx.fillStyle = 'rgba(255,255,255,0.82)'
+      roundRect(ctx, cx - w / 2, soldiersY - 56, w, 26, 8)
+      ctx.fill()
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(cx - w / 2 + 13, soldiersY - 43, 6, 0, Math.PI * 2) // 色點
+      ctx.fill()
+      ctx.textAlign = 'left'
+      ctx.fillText(label, cx - w / 2 + 24, soldiersY - 37)
+    }
+    tag('以色列', ISRAEL, VIEW.W * 0.17)
+    tag('亞瑪力', AMALEK, VIEW.W * 0.83)
+
+    // 交擊火花(在前線,隨 flash 閃)
+    if (m.flash > 0.05) {
+      ctx.fillStyle = `rgba(255,236,170,${m.flash})`
+      for (let i = 0; i < 5; i++) {
+        const fx = frontX + (Math.sin(i * 2.3 + t * 9) * 18)
+        const fy = soldiersY - 14 + Math.cos(i * 1.9 + t * 7) * 8
+        ctx.beginPath()
+        ctx.arc(fx, fy, 2.5 + m.flash * 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    // ---- 山頂(摩西站立的高處,畫面右中)----
+    const hillX = VIEW.W * 0.5
+    const hillTopY = horizonY - 90
+    ctx.fillStyle = mix([170, 146, 96], [120, 80, 64], prog)
+    ctx.beginPath()
+    ctx.moveTo(hillX - 150, horizonY + 4)
+    ctx.quadraticCurveTo(hillX - 60, hillTopY + 6, hillX, hillTopY)
+    ctx.quadraticCurveTo(hillX + 60, hillTopY + 6, hillX + 150, horizonY + 4)
+    ctx.closePath()
+    ctx.fill()
+    // 摩西坐的石頭(17:12「搬石頭來…他就坐在上面」)——手很沉時更明顯
+    ctx.fillStyle = 'rgba(90,70,50,0.9)'
+    ctx.fillRect(hillX - 16, hillTopY + 2, 32, 12)
+
+    // ---- 亞倫、戶珥(山頂左右),扶手時舉起內側手 + 光暈 ----
+    const helperFootY = hillTopY + 2
+    this._helper(hillX - 40, helperFootY, m.supporting, false, prog) // 亞倫(左,朝右扶)
+    this._helper(hillX + 40, helperFootY, m.supporting, true, prog) // 戶珥(右,朝左扶)
+
+    // ---- 摩西(雙手依 armDrop 高舉/垂下,手握杖)----
+    this._moses(hillX, hillTopY, m.armDrop, m.supporting, t)
+
+    // ---- HUD:兩條狀態條 + 可用度 + 太陽計時提示 ----
+    this._mosesHud(game, m, prog)
+  }
+
+  // 山頂上的扶手者(亞倫 / 戶珥):站立的簡化人形;supporting 時舉起內側手去扶摩西的手,並亮起光暈。
+  // mirror=true 代表在右邊、面向左。
+  _helper(x, footY, supporting, mirror, prog) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.translate(x, footY)
+    if (mirror) ctx.scale(-1, 1)
+    const robe = supporting ? '#e9d9a6' : '#cdbd95'
+    const skin = '#dca877'
+    // 腿
+    ctx.strokeStyle = skin
+    ctx.lineWidth = 5
+    ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(-3, -16); ctx.lineTo(-5, 0); ctx.moveTo(3, -16); ctx.lineTo(5, 0); ctx.stroke()
+    // 袍身
+    ctx.fillStyle = robe
+    ctx.beginPath()
+    ctx.moveTo(-9, -38); ctx.lineTo(9, -38); ctx.lineTo(7, -14); ctx.lineTo(-7, -14); ctx.closePath()
+    ctx.fill()
+    // 頭:頭巾(亞倫=藍帶、戶珥=紅褐帶,兩人好分辨)+ 五官 + 短鬍
+    const hy = -44
+    const wrap = mirror ? '#e6dcd2' : '#dfe6df' // 戶珥 / 亞倫
+    const band = mirror ? '#a8623a' : '#3a6ea5' // 戶珥紅褐 / 亞倫藍
+    ctx.fillStyle = wrap
+    ctx.beginPath(); ctx.arc(0, hy, 7, 0, Math.PI * 2); ctx.fill() // 頭巾底
+    ctx.fillStyle = skin
+    ctx.beginPath(); ctx.arc(0, hy + 1.5, 5.4, 0, Math.PI * 2); ctx.fill() // 臉
+    ctx.fillStyle = band
+    ctx.fillRect(-5.8, hy - 3, 11.6, 2.6) // 頭帶
+    ctx.fillStyle = '#5a4326'
+    ctx.beginPath(); ctx.moveTo(-4, hy + 4); ctx.lineTo(4, hy + 4); ctx.lineTo(0, hy + 11); ctx.closePath(); ctx.fill() // 短鬍
+    ctx.fillStyle = '#3a2c1c'
+    ctx.beginPath(); ctx.arc(-2.2, hy + 1, 1, 0, Math.PI * 2); ctx.arc(2.2, hy + 1, 1, 0, Math.PI * 2); ctx.fill() // 眼
+    // 內側手:扶手時往內上方舉(去托摩西的手);否則自然垂著
+    ctx.strokeStyle = robe
+    ctx.lineWidth = 5
+    ctx.beginPath()
+    ctx.moveTo(4, -36)
+    if (supporting) ctx.lineTo(20, -52)
+    else ctx.lineTo(10, -20)
+    ctx.stroke()
+    if (supporting) {
+      ctx.fillStyle = 'rgba(255,236,170,0.5)'
+      ctx.beginPath(); ctx.arc(20, -52, 6, 0, Math.PI * 2); ctx.fill()
+    }
+    ctx.restore()
+  }
+
+  // 山頂的摩西:站立的白袍人形,兩手向上舉杖;armDrop 0=直舉、1=垂到肩側。
+  _moses(x, footY, armDrop, supporting, t) {
+    const ctx = this.ctx
+    const COL = { robe: '#f6f3ec', robeDark: '#dcd5c6', skin: '#e8bb8d', beard: '#cfcfcf', staff: '#8a5a2a', knob: '#6f4720' }
+    // 手累時微微發抖
+    const tremble = armDrop > 0.55 ? Math.sin(t * 22) * armDrop * 2 : 0
+    ctx.save()
+    ctx.translate(x + tremble, footY)
+    // 腿
+    ctx.strokeStyle = COL.skin; ctx.lineWidth = 7; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(-4, -20); ctx.lineTo(-7, 0); ctx.moveTo(4, -20); ctx.lineTo(7, 0); ctx.stroke()
+    // 袍身
+    ctx.fillStyle = COL.robe
+    ctx.beginPath()
+    ctx.moveTo(-11, -50); ctx.lineTo(11, -50); ctx.lineTo(9, -18); ctx.lineTo(-9, -18); ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = COL.robeDark
+    ctx.beginPath(); ctx.moveTo(2, -50); ctx.lineTo(9, -50); ctx.lineTo(9, -18); ctx.lineTo(3, -18); ctx.closePath(); ctx.fill()
+    // 頭:白髮頭巾 + 五官 + 隨疲勞變化的表情(年長的摩西)
+    const headY = -60
+    const strain = Math.max(0, Math.min(1, (armDrop - 0.4) / 0.6)) // 0=輕鬆 .. 1=快撐不住
+    const WRAP = '#efe9da', BAND = '#9c7a3a', HAIR = '#e8e8e8'
+    // 頭巾後襯(罩住頭頂與兩側,當作頭巾+白髮的底)
+    ctx.fillStyle = WRAP
+    ctx.beginPath(); ctx.arc(0, headY, 9.5, 0, Math.PI * 2); ctx.fill()
+    // 兩側露出的白髮/鬢
+    ctx.fillStyle = HAIR
+    ctx.beginPath(); ctx.ellipse(-8, headY + 2, 2.6, 4, 0, 0, Math.PI * 2); ctx.ellipse(8, headY + 2, 2.6, 4, 0, 0, Math.PI * 2); ctx.fill()
+    // 臉(略低、略小,讓頭巾在上方露出一圈)
+    ctx.fillStyle = COL.skin
+    ctx.beginPath(); ctx.arc(0, headY + 1.5, 7, 0, Math.PI * 2); ctx.fill()
+    // 頭帶(額前的帶子)
+    ctx.fillStyle = BAND
+    ctx.fillRect(-7.5, headY - 3.5, 15, 3)
+    // 白鬍(年長,較長)
+    ctx.fillStyle = HAIR
+    ctx.beginPath(); ctx.moveTo(-6, headY + 5); ctx.lineTo(6, headY + 5); ctx.lineTo(0, headY + 18); ctx.closePath(); ctx.fill()
+    // 眼睛(專注;疲勞時瞇起→用短橫線)
+    ctx.fillStyle = '#3a2c1c'
+    if (strain > 0.55) {
+      ctx.lineWidth = 1.6; ctx.strokeStyle = '#3a2c1c'; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(-4.4, headY + 1); ctx.lineTo(-1.6, headY + 1.6); ctx.moveTo(4.4, headY + 1); ctx.lineTo(1.6, headY + 1.6); ctx.stroke()
+    } else {
+      ctx.beginPath(); ctx.arc(-3, headY + 1, 1.2, 0, Math.PI * 2); ctx.arc(3, headY + 1, 1.2, 0, Math.PI * 2); ctx.fill()
+    }
+    // 眉(疲勞時皺起、內低)
+    ctx.lineWidth = 1.4; ctx.strokeStyle = '#6a5436'; ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(-5, headY - 1 - (1 - strain) * 0.5); ctx.lineTo(-1.5, headY - 1 + strain * 1.6)
+    ctx.moveTo(5, headY - 1 - (1 - strain) * 0.5); ctx.lineTo(1.5, headY - 1 + strain * 1.6)
+    ctx.stroke()
+    // 嘴(輕鬆=微抿;吃力=張口使勁)
+    ctx.fillStyle = '#7a3b2a'
+    if (strain > 0.5) { ctx.beginPath(); ctx.ellipse(0, headY + 5.5, 1.8, 1.2 + strain, 0, 0, Math.PI * 2); ctx.fill() }
+    else { ctx.lineWidth = 1.4; ctx.strokeStyle = '#7a3b2a'; ctx.beginPath(); ctx.moveTo(-2, headY + 5.5); ctx.lineTo(2, headY + 5.5); ctx.stroke() }
+    // 用力的汗珠(快撐不住時)
+    if (strain > 0.6) {
+      ctx.fillStyle = 'rgba(120,180,230,0.9)'
+      ctx.beginPath(); ctx.arc(7.5, headY + 4 + (t * 30 % 8), 1.6, 0, Math.PI * 2); ctx.fill()
+    }
+
+    // 手臂:肩在 (-9,-48)/(9,-48);舉起角度依 armDrop。
+    // armDrop=0 → 手幾乎直直向上;armDrop=1 → 手垂到約肩側水平。
+    const shoulderY = -48
+    const up = 1 - armDrop // 1=高舉
+    const armLen = 26
+    // 手相對肩的位移:向上(-y)且略向中(舉杖);垂下時向外下垂
+    const dx = 6 + (1 - up) * 10
+    const dy = -armLen * (0.35 + up * 0.65)
+    const lhx = -9 - dx * 0.2, lhy = shoulderY + dy
+    const rhx = 9 + dx * 0.2, rhy = shoulderY + dy
+    ctx.strokeStyle = COL.robe; ctx.lineWidth = 7; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(-9, shoulderY); ctx.lineTo(lhx, lhy); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(9, shoulderY); ctx.lineTo(rhx, rhy); ctx.stroke()
+    // 手(膚色)
+    ctx.fillStyle = COL.skin
+    ctx.beginPath(); ctx.arc(lhx, lhy, 4, 0, Math.PI * 2); ctx.fill()
+    ctx.beginPath(); ctx.arc(rhx, rhy, 4, 0, Math.PI * 2); ctx.fill()
+
+    // 神的杖:橫握在兩手之間,略斜
+    ctx.strokeStyle = COL.staff; ctx.lineWidth = 5; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(lhx - 6, lhy - 4); ctx.lineTo(rhx + 6, rhy + 4); ctx.stroke()
+    ctx.fillStyle = COL.knob
+    ctx.beginPath(); ctx.arc(lhx - 6, lhy - 4, 3.5, 0, Math.PI * 2); ctx.fill()
+
+    // 高舉時手上方一點榮光(舉手就得勝)
+    if (up > 0.55) {
+      ctx.fillStyle = `rgba(255,240,190,${(up - 0.55) * 0.8})`
+      ctx.beginPath(); ctx.arc((lhx + rhx) / 2, (lhy + rhy) / 2 - 8, 10, 0, Math.PI * 2); ctx.fill()
+    }
+    ctx.restore()
+  }
+
+  // 摩西關的 HUD:上方兩條(手的力量 / 戰況)+ 亞倫戶珥可用度 + 太陽計時 + 兩區操作提示。
+  _mosesHud(game, m, prog) {
+    const ctx = this.ctx
+    const barW = 300, barH = 16, bx = (VIEW.W - barW) / 2
+
+    // 進度(日出→日落),走 hudLabels(嵌入契約,不寫死)
+    const hud = game.hudLabels || { start: '日出', goal: '日落得勝 🌄' }
+    let by = 30
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; roundRect(ctx, bx, by, barW, barH, 8); ctx.fill()
+    ctx.fillStyle = '#e8a13a'; roundRect(ctx, bx, by, barW * prog, barH, 8); ctx.fill()
+    ctx.fillStyle = '#5a3a16'; ctx.font = '600 15px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; ctx.fillText(hud.start, bx, by - 3)
+    ctx.textAlign = 'right'; ctx.fillText(hud.goal, bx + barW, by - 3)
+
+    // 手的力量(= 1 - armDrop;越高越好,綠;低於安全線轉紅)
+    const armStrength = 1 - m.armDrop
+    const safe = 1 - MOSES.safeDrop
+    by = 70
+    this._statBar(bx, by, barW, barH, armStrength, armStrength >= safe ? '#2f9e44' : '#d6533b', '🙌 手的力量')
+    // 安全線標記
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(bx + barW * safe - 1, by - 2, 2, barH + 4)
+
+    // 戰況(defeat;越高越危險,紅)
+    by = 104
+    this._statBar(bx, by, barW, barH, m.defeat, '#c0392b', '⚔️ 戰況(亞瑪力)')
+
+    // 亞倫、戶珥可用度(自動扶手;扶手中變亮)
+    by = 138
+    this._statBar(bx, by, barW, barH, m.support, m.supporting ? '#f4c542' : '#caa83a', m.supporting ? '🤝 亞倫、戶珥 扶手中' : '🤝 亞倫、戶珥(手垂下時自動扶)')
+
+    // 提示:扶手中 → 安慰語;否則手快垂下 → 提醒用力舉手
+    if (m.supporting) {
+      ctx.fillStyle = `rgba(70,130,90,${0.55 + 0.35 * Math.abs(Math.sin(m.time * 5))})`
+      ctx.font = '800 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText('亞倫、戶珥扶住了摩西的手!', VIEW.W / 2, VIEW.H * 0.46)
+    } else if (m.suggestHelp()) {
+      ctx.fillStyle = `rgba(214,83,59,${0.6 + 0.4 * Math.abs(Math.sin(m.time * 6))})`
+      ctx.font = '800 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText('手要垂下了!用力舉手 🙌', VIEW.W / 2, VIEW.H * 0.46)
+    }
+
+    // 操作提示(常駐,單一動作)
+    ctx.font = '700 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'
+    ctx.textAlign = 'center'
+    ctx.fillStyle = 'rgba(40,50,64,0.9)'
+    ctx.fillText('按住畫面(或任意方向鍵)= 出力舉手 🙌　·　手垂下時亞倫、戶珥會自動來扶', VIEW.W / 2, VIEW.H - 12)
+  }
+
+  // 一條標籤狀態條(0..1):底白 + 填色 + 左上小標籤
+  _statBar(x, y, w, h, v, color, label) {
+    const ctx = this.ctx
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; roundRect(ctx, x, y, w, h, 8); ctx.fill()
+    ctx.fillStyle = color; roundRect(ctx, x, y, w * Math.max(0, Math.min(1, v)), h, 8); ctx.fill()
+    ctx.fillStyle = '#33485a'; ctx.font = '600 14px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(label, x, y - 3)
   }
 
   // 第三關「大魚肚內」畫面:漆黑的魚腹(肋骨、水、氣泡、禱告的約拿),

@@ -1,7 +1,22 @@
 # roadmap.md — 約拿闖關 (Jonah Game)
 
-> 對齊現況 **2026-06-11**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
+> 對齊現況 **2026-06-13**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
 > 線上版:**https://hfpc-jonah-game.netlify.app/** ・ GitHub:`summer09201017-cloud/hfpc-jonah-game`(branch `main`)。
+> 🆕 **完整的三專案現況、戰爭關進度與 CP 值功能清單,見 `讀我-HANDOFF.txt`(2026-06-13)。**
+
+---
+
+## 🆕 2026-06-13 新增(摘要,詳見 讀我-HANDOFF.txt)
+
+- **總入口大廳 `hfpc-bible-games` 已上線**(https://hfpc-bible-games.netlify.app/):卡片牆連到各遊戲,
+  資料驅動、PWA 安裝鈕、自動部署;**大廳不含遊戲,只是門口**。
+- **戰爭闖關系列開工**(動作關,暫住約拿 repo 做原型):
+  - ✅ **#1 摩西舉手之戰**(出 17)可玩:`?level=moses`、`src/moses.js`(重用 storm 平衡引擎)、
+    level===7、config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作已依牧師實測簡化
+    (按住=舉手、亞倫戶珥自動扶手)、日落 20 秒、加表情/兩軍標籤。
+  - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config `REDSEA` + scripture `REDSEA` 已就緒,
+    場景 `redsea.js`(level===8)與 `_drawRedSea` 待寫(~半天,步驟見 HANDOFF)。
+  - ⚠ 戰爭關**別 push 約拿 main**(會自動部署曝光原型);永久家是「驗證後搬進保羅 repo」。
 
 ---
 

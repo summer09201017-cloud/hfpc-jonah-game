@@ -1,6 +1,6 @@
 # CLAUDE.md — 約拿闖關 (Jonah Game)
 
-給接手這個專案的 AI / 開發者讀。**先讀這頁(架構 / 地雷),狀態看 `roadmap.md`(已完成 vs 真正待做),玩法看 `README.md`。** 對齊現況(2026-06-11)。
+給接手這個專案的 AI / 開發者讀。**先讀這頁(架構 / 地雷),狀態看 `roadmap.md`(已完成 vs 真正待做),玩法看 `README.md`,三專案現況與待做看 `讀我-HANDOFF.txt`。** 對齊現況(2026-06-13)。
 
 ## 這是什麼
 
@@ -18,7 +18,7 @@ GitHub: `https://github.com/summer09201017-cloud/hfpc-jonah-game`(branch `main`)
 1. **`ui` 由外部注入,不要 `import './ui.js'`。** `game.js` 收 `new Game(canvas, opts)`:單機由 `main.js` 傳 `{ ui: new UI() }`;嵌入由保羅傳空殼 `NullUI`。**若你在 `game.js` 重新 `import { UI } from './ui.js'`,同步腳本會中止並報「嵌入契約被破壞」**——請改回注入。
 2. **`embed` 旗標**(預設 `false`,所以單機行為完全不變):`opts.embed` 為 true 時跳過標題、直接開 `opts.level`、結束呼叫 `opts.onComplete({won,score,level})`;`loop()` 受 `this.stopped` 控制;`destroy()` 會停迴圈+`input.detach()`+停音樂。
 3. **HUD 進度條兩端文字走 `this.hudLabels`**:外層注入存在 `this._hudOverride`,各關 `startX()` 用 `this.hudLabels = this._hudOverride || { ...LEVELx.hud }` 的形式設定(有注入用注入的,否則用該關預設);`renderer.js` 讀 `game.hudLabels`,別寫死地名。
-4. **嵌入支援全六關**(`embedLevel` 白名單 `[1..6]`,2026-06-10 起),分兩類:
+4. **嵌入支援全六關 + 戰爭關原型**(`embedLevel` 白名單 `[1..7]`;7 = 戰爭闖關「摩西舉手」,2026-06-13 起),分兩類:
    - **1/2/4(純 Canvas 關)**:宿主注入空殼 `NullUI` 即可。
    - **3/5/6(卡片流程關)**:卡片走 `ui.showFishIntro/Question/Reveal/TryAgain`、`showPreach*`、`showGourd*`,宿主必須注入**會畫卡片的 EmbedUI**——保羅的 `MiniGameModal.jsx` 用 React 卡片實作了這組方法,按鈕直接呼叫 `game.handleFishAction/handlePreachAction/handleGourdAction(act, ds)`;純 NullUI 會停在 intro 不動。完成點 `_fishWin/_preachWin/_gourdWin` 都有 `if (this.embed) return this._finish(true)`(這三關不會失敗)。
    新關卡要可嵌入:過關/失敗走有嵌入分支的結束函式,把關號加進白名單與 `boot()` 派發;若有卡片流程,同步在保羅 EmbedUI 補對應方法。
@@ -103,7 +103,13 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
   **第六關 蓖麻樹(反思結局:五幕場景動畫——棚下/蓖麻/蟲子/東風/神的心,神「安排」玩家只觀看,每幕一題反思,拿 4:1–11)**;
   標題聖經問答、手機橫向全螢幕、音效、PWA(**sw 已預快取整個 app shell,安裝後可直接離線**)、
   **自動化煙霧測試 `npm test`**、**已部署** https://hfpc-jonah-game.netlify.app/;並**已被保羅大富翁桌遊嵌入全六關**(約拿之旅 20 站、6 個闖關站)。
-- 🔜 待做:各關手感實測微調;**真實手機離線實測**(自動檢查已綠,仍建議裝一台確認);
+- 🆕 **(2026-06-13)戰爭闖關系列開工**(動作關,暫住本 repo 做原型):
+  - ✅ **#1 摩西舉手之戰**(出 17,`?level=moses`):`src/moses.js` 重用 storm 平衡引擎、level===7、
+    config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作=按住舉手、亞倫戶珥手垂時自動扶。
+  - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config/scripture `REDSEA` 就緒,`redsea.js`(level 8)+ `_drawRedSea` 待寫。
+  - ⚠ 戰爭關**別 push 到約拿 `main`**(會自動部署、把原型曝光);永久家=驗證後搬進保羅 repo。詳見 `讀我-HANDOFF.txt`。
+- 🆕 **(2026-06-13)總入口大廳 `hfpc-bible-games` 已上線**(獨立 repo + Netlify,卡片牆連到各遊戲;**不含遊戲**)。
+- 🔜 待做:戰爭關紅海收尾與手感微調;**真實手機離線實測**(自動檢查已綠,仍建議裝一台確認);
   (可選)真實美術 PNG sprite、約拿地圖改真實地理。
 
 ## 相關 skill(`~/.claude/skills/`)

@@ -7,6 +7,14 @@ const canvas = document.getElementById('game')
 const game = new Game(canvas, { ui: new UI() })
 game.boot()
 
+// 試玩捷徑(戰爭闖關原型,驗證手感用):網址加 ?level=moses 直接進「摩西舉手之戰」(出 17)。
+// 不影響正常六關流程——一般玩家看不到;之後要嵌入保羅大富翁則走 opts.level=7。
+try {
+  if (new URLSearchParams(location.search).get('level') === 'moses' && game.startMoses) {
+    game.startMoses()
+  }
+} catch {}
+
 // Service Worker 策略:
 //   - 開發環境(localhost):移除任何已註冊的 SW 並清掉快取,確保永遠載入最新程式
 //     (否則「快取優先」的 SW 會一直餵舊檔,改了沒反應)。
