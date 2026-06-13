@@ -7,7 +7,8 @@ import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { Moses } from './moses.js'
 import { Jehoshaphat } from './jehoshaphat.js'
-import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES, JEHOSHAPHAT } from './scripture.js'
+import { Balaam } from './balaam.js'
+import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES, JEHOSHAPHAT, BALAAM } from './scripture.js'
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
 const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach', GOURD: 'gourd' }
@@ -33,8 +34,8 @@ export class Game {
     this.onComplete = opts.onComplete || null
     // 嵌入支援全六關。注意：3/5/6 的卡片流程走 ui.showFish*/showPreach*/showGourd*——
     // 宿主(保羅)嵌入這幾關時，注入的 ui 必須實作這些卡片方法(EmbedUI)，純 NullUI 會卡在 intro。
-    // 嵌入白名單:1–6 為約拿六關;7 = 摩西舉手(出 17);9 = 聖歌奇兵(代下 20)——皆純 Canvas 關,NullUI 即可
-    this.embedLevel = [1, 2, 3, 4, 5, 6, 7, 9].includes(opts.level) ? opts.level : 1
+    // 嵌入白名單:1–6 約拿六關;7=摩西舉手(出17);9=聖歌奇兵(代下20);10=反轉奇兵(民22)——皆純 Canvas,NullUI 即可
+    this.embedLevel = [1, 2, 3, 4, 5, 6, 7, 9, 10].includes(opts.level) ? opts.level : 1
     this.embedMode = opts.mode === 'walk' ? 'walk' : 'run'
     this._hudOverride = opts.hudLabels || null // 外層(保羅)注入的進度條地名；沒注入時各關用自己的預設(LEVELx.hud)
     this.hudLabels = this._hudOverride || { ...LEVEL1.hud }
@@ -43,6 +44,7 @@ export class Game {
     this.storm = new Storm(this)
     this.moses = new Moses(this) // 戰爭闖關原型(出 17);level === 7
     this.jehoshaphat = new Jehoshaphat(this) // 戰爭闖關原型(代下 20);level === 9
+    this.balaam = new Balaam(this) // 戰爭闖關原型(民 22);level === 10
     this.state = STATE.TITLE
     this.level = 1 // 1=約帕港口(跑酷) / 2=暴風雨(平衡) / 3=大魚肚(默想) / 4=上岸→尼尼微(跑酷)
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
@@ -74,6 +76,7 @@ export class Game {
       else if (this.embedLevel === 6) this.startGourd()
       else if (this.embedLevel === 7) this.startMoses()
       else if (this.embedLevel === 9) this.startJehoshaphat()
+      else if (this.embedLevel === 10) this.startBalaam()
       else this.start(this.embedMode)
       requestAnimationFrame((t) => this.loop(t))
       return
@@ -212,9 +215,24 @@ export class Game {
     Audio.stopMusic()
   }
 
+  // 戰爭闖關原型「反轉奇兵 · 巴蘭的驢」(民 22):自成一格的閃避場景。
+  // 單機由 ?level=balaam 進;嵌入由 opts.level=10 進。走到底=過關,時限內走不到=失敗。
+  startBalaam() {
+    this._enterImmersive()
+    this.level = 10
+    this.balaam.reset()
+    this.hudLabels = this._hudOverride || { ...BALAAM.hud }
+    this.ui.hide()
+    this.state = STATE.PLAYING
+    this.ui.showPauseButton()
+    Audio.unlock()
+    Audio.stopMusic()
+  }
+
   // 重玩目前這一關(失敗/暫停→重新開始 用)
   restartCurrent() {
-    if (this.level === 9) this.startJehoshaphat()
+    if (this.level === 10) this.startBalaam()
+    else if (this.level === 9) this.startJehoshaphat()
     else if (this.level === 7) this.startMoses()
     else if (this.level === 6) this.startGourd()
     else if (this.level === 5) this.startPreach()
@@ -226,7 +244,8 @@ export class Game {
 
   // 進入下一關
   next() {
-    if (this.level === 9) this.startJehoshaphat() // 戰爭原型:再唱一次(不接約拿關鏈)
+    if (this.level === 10) this.startBalaam() // 戰爭原型:再走一次(不接約拿關鏈)
+    else if (this.level === 9) this.startJehoshaphat() // 戰爭原型:再唱一次(不接約拿關鏈)
     else if (this.level === 7) this.startMoses() // 戰爭原型:再玩一次(不接約拿關鏈)
     else if (this.level === 1) this.startStorm()
     else if (this.level === 2) this.startFish()
@@ -288,6 +307,11 @@ export class Game {
     // 戰爭闖關原型「聖歌奇兵」(代下 20)自成一格,交給 Jehoshaphat 場景處理
     if (this.level === 9) {
       this.jehoshaphat.step(dt)
+      return
+    }
+    // 戰爭闖關原型「反轉奇兵」(民 22)自成一格,交給 Balaam 場景處理
+    if (this.level === 10) {
+      this.balaam.step(dt)
       return
     }
 
@@ -518,6 +542,16 @@ export class Game {
     Audio.stopMusic()
     Audio.sfx('win')
     if (this.embed) return this._finish(true)
+    if (this.level === 10) {
+      // 戰爭闖關原型「反轉奇兵」:走到底、巴蘭眼開得勝。原型不接約拿關鏈——「下一關」= 再走一次。
+      this.ui.showWin(BALAAM, null, {
+        showCoins: false,
+        nextLabel: '🔁 再走一次',
+        nextEnabled: true,
+        progress: '戰爭闖關原型 · 反轉奇兵(民 22)',
+      })
+      return
+    }
     if (this.level === 9) {
       // 戰爭闖關原型「聖歌奇兵」:敵軍自亂條滿得勝。原型不接約拿關鏈——「下一關」= 再唱一次。
       this.ui.showWin(JEHOSHAPHAT, null, {
@@ -571,7 +605,9 @@ export class Game {
     Audio.sfx('lose')
     if (this.embed) return this._finish(false)
     this.ui.showLose(
-      this.level === 9
+      this.level === 10
+        ? BALAAM
+        : this.level === 9
         ? JEHOSHAPHAT
         : this.level === 7
           ? MOSES

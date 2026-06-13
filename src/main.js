@@ -13,6 +13,7 @@ try {
   const lv = new URLSearchParams(location.search).get('level')
   if (lv === 'moses' && game.startMoses) game.startMoses()
   else if (lv === 'jehoshaphat' && game.startJehoshaphat) game.startJehoshaphat()
+  else if (lv === 'balaam' && game.startBalaam) game.startBalaam()
 } catch {}
 
 // Service Worker 策略:

@@ -3,7 +3,7 @@
 // 順手更新快取;離線時才退回快取。這樣改版不會被舊快取黏住。
 // 改版時把 CACHE 版本號 +1,舊快取會在啟用時自動清除。
 
-const CACHE = 'jonah-v5'
+const CACHE = 'jonah-v6'
 // 預快取「整個 app shell」(HTML + CSS + 全部 ES 模組 + 圖示),
 // 這樣「安裝後馬上離線」(教室沒網路)也能玩,不必先線上完整跑一輪。
 // 仍是 network-first(下方 fetch):線上一律拿最新並更新快取,離線才退回這份預快取。
@@ -22,6 +22,7 @@ const CORE = [
   '/src/storm.js',
   '/src/moses.js',
   '/src/jehoshaphat.js',
+  '/src/balaam.js',
   '/src/renderer.js',
   '/src/input.js',
   '/src/ui.js',

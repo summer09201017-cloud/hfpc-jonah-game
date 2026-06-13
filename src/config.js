@@ -104,6 +104,28 @@ export const JEHOSHAPHAT = {
   twingeFade: 0.9, // 陣痛消退速度
 }
 
+// 戰爭闖關原型 #4「反轉奇兵 · 巴蘭的驢」(民 22)——自成一格的場景(level === 10)。
+//   閃避關:↑/↓(或指標)上下移動驢子,避開「拔刀的使者」(巴蘭看不見,只有驢看見)。
+//   沒撞到 → progress 前進;撞到 → 驢停步、巴蘭鞭打、progress 暫停略退。走到底(progress=1)
+//   = 使者顯現、驢開口、巴蘭眼開(得勝);時限內走不到 = 失敗。撞到不會死(寬容)。
+//   調難度:angelSpeed↑ / spawnInterval↓ / hitBandY↑ 變難;duration↑ / advanceSpeed↑ 變簡單。
+export const BALAAM = {
+  duration: 40, // 時限(秒):progress 沒在這之內到 1 = 失敗
+  advanceSpeed: 0.055, // 沒撞使者時前進速度(0..1/秒;約 18 秒可走完,留時間閃避)
+  backOnBump: 0.02, // 撞到時 progress 倒退速度(壓力;設 0 = 只暫停不倒退)
+  donkeySpeed: 1.8, // 驢上下移動速度(每秒走過多少「道路高度」0..1)
+  roadTop: 0.1, // 驢/使者可在的縱向範圍(0=道路上緣 .. 1=下緣)
+  roadBot: 0.9,
+  donkeyX: 0.26, // 驢固定的 x(0..1 畫面寬)
+  hitBandX: 0.07, // 橫向命中帶:使者 x 進入 donkeyX±此值才判定
+  hitBandY: 0.16, // 縱向命中帶:|驢.y − 使者.y| < 此值 = 在同一條路上 = 撞上
+  angelSpeedMin: 0.34, // 使者從右往左捲動速度(0..1 寬/秒)
+  angelSpeedMax: 0.5,
+  spawnInterval: 1.5, // 使者出現間隔(秒)
+  spawnRampPerSec: 0.012, // 間隔隨時間縮短的量(後段密一點)
+  bumpCooldown: 0.7, // 同一隻使者的撞擊判定冷卻(避免連扣)
+}
+
 // 戰爭闖關原型 #2「紅海奔逃」(出 14)——自成一格的場景(level === 8),重用「跑酷/跳躍」手感。
 //   phase: stand(站住等候、海漸開)→ cross(過海床、跳障礙、追兵在後)→ closing(海合攏淹追兵)→ done。
 //   lead = 領先追兵的距離(px):乾淨奔跑會拉開(gapRecoverPerSec,上限 chaseGapMax),
