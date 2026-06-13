@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD, MOSES } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD, MOSES, JEHOSHAPHAT } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -56,6 +56,11 @@ export class Renderer {
     // 戰爭闖關原型「摩西舉手」(出 17)也是另一個畫面
     if (game.level === 7) {
       this._drawMoses(game)
+      return
+    }
+    // 戰爭闖關原型「聖歌奇兵 · 約沙法」(代下 20)也是另一個畫面
+    if (game.level === 9) {
+      this._drawJehoshaphat(game)
       return
     }
     // 第三關「大魚肚內」也是另一個畫面
@@ -882,6 +887,158 @@ export class Renderer {
     ctx.fillStyle = color; roundRect(ctx, x, y, w * Math.max(0, Math.min(1, v)), h, 8); ctx.fill()
     ctx.fillStyle = '#33485a'; ctx.font = '600 14px "Noto Sans TC","Microsoft JhengHei",sans-serif'
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(label, x, y - 3)
+  }
+
+  // 戰爭闖關「聖歌奇兵 · 約沙法」(代下 20):谷中三國聯軍自相殘殺、詩班走在軍前往望樓。
+  _drawJehoshaphat(game) {
+    const ctx = this.ctx
+    const j = game.jehoshaphat
+    const t = j.time
+    const lerp = (a, b, k) => a + (b - a) * k
+    const mix = (c1, c2, k) =>
+      `rgb(${Math.round(lerp(c1[0], c2[0], k))},${Math.round(lerp(c1[1], c2[1], k))},${Math.round(lerp(c1[2], c2[2], k))})`
+    const tri = Math.min(1, j.ambush) // 得勝氣氛(自亂條越滿,天色越光明)
+    const horizonY = GROUND_Y - 30
+
+    // 天空:清晨 → 得勝金光
+    const sky = ctx.createLinearGradient(0, 0, 0, VIEW.H)
+    sky.addColorStop(0, mix([150, 176, 206], [120, 150, 210], tri))
+    sky.addColorStop(0.6, mix([196, 212, 232], [250, 224, 150], tri))
+    sky.addColorStop(1, mix([214, 226, 238], [252, 240, 196], tri))
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, VIEW.W, VIEW.H)
+
+    // 遠山
+    ctx.fillStyle = mix([150, 164, 150], [150, 128, 96], tri)
+    ctx.beginPath(); ctx.moveTo(0, horizonY)
+    for (let x = 0; x <= VIEW.W; x += 28) {
+      const y = horizonY - 36 - Math.sin(x * 0.009 + 0.6) * 30 - Math.sin(x * 0.022) * 10
+      ctx.lineTo(x, y)
+    }
+    ctx.lineTo(VIEW.W, horizonY); ctx.closePath(); ctx.fill()
+
+    // 谷地
+    ctx.fillStyle = mix([176, 158, 108], [196, 176, 120], tri)
+    ctx.fillRect(0, horizonY, VIEW.W, VIEW.H - horizonY)
+
+    // 望樓(詩班的目標,右側)
+    const towerX = VIEW.W * 0.9
+    const baseY = horizonY + 18
+    ctx.fillStyle = '#8a7250'; ctx.fillRect(towerX - 16, baseY - 86, 32, 86)
+    ctx.fillStyle = '#6f5a3c'; ctx.fillRect(towerX - 22, baseY - 100, 44, 16)
+    ctx.strokeStyle = '#5a4326'; ctx.lineWidth = 3
+    ctx.beginPath(); ctx.moveTo(towerX, baseY - 100); ctx.lineTo(towerX, baseY - 128); ctx.stroke()
+    ctx.fillStyle = tri > 0.5 ? '#e8b53a' : '#b9a06a'
+    ctx.beginPath(); ctx.moveTo(towerX, baseY - 128); ctx.lineTo(towerX + 20, baseY - 122); ctx.lineTo(towerX, baseY - 116); ctx.closePath(); ctx.fill()
+
+    // 谷中三國聯軍(摩押/亞捫/西珥):自亂條越高,倒下的越多、彼此攻擊
+    const valleyY = horizonY + 42
+    const zones = [
+      { x: VIEW.W * 0.42, c: '#9c3b3b' },
+      { x: VIEW.W * 0.55, c: '#8a5a9c' },
+      { x: VIEW.W * 0.68, c: '#5a7a3a' },
+    ]
+    zones.forEach((z, zi) => {
+      for (let i = 0; i < 4; i++) {
+        const idx = zi * 4 + i
+        const down = idx / 12 < j.ambush
+        const x = z.x + (i - 1.5) * 12
+        ctx.fillStyle = z.c
+        if (down) {
+          ctx.save(); ctx.translate(x, valleyY); ctx.rotate(1.4)
+          ctx.fillRect(-3, -9, 6, 15); ctx.beginPath(); ctx.arc(0, -12, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.restore()
+        } else {
+          const bob = Math.sin(t * 7 + idx) * 2
+          ctx.fillRect(x - 3, valleyY - 16 + bob, 6, 16)
+          ctx.beginPath(); ctx.arc(x, valleyY - 19 + bob, 3.2, 0, Math.PI * 2); ctx.fill()
+          ctx.strokeStyle = z.c; ctx.lineWidth = 2
+          ctx.beginPath(); ctx.moveTo(x + 3, valleyY - 13 + bob); ctx.lineTo(x + 10, valleyY - 22 + bob); ctx.stroke()
+        }
+      }
+    })
+    if (j.ambushFlash > 0.05) {
+      ctx.fillStyle = `rgba(255,236,170,${j.ambushFlash})`
+      for (let i = 0; i < 6; i++) {
+        const fx = VIEW.W * 0.55 + Math.sin(i * 2.1 + t * 9) * 70
+        const fy = valleyY - 12 + Math.cos(i * 1.7 + t * 7) * 8
+        ctx.beginPath(); ctx.arc(fx, fy, 2 + j.ambushFlash * 3, 0, Math.PI * 2); ctx.fill()
+      }
+    }
+
+    // 詩班(白袍,前排)+ 約沙法(帶冠領唱)+ 後方軍隊,依 advance 走向望樓;讚美時舉手、出音符、放光波
+    const marchX = lerp(VIEW.W * 0.1, VIEW.W * 0.78, j.advance)
+    const choirY = horizonY + 70
+    const praising = j.praise >= JEHOSHAPHAT.advanceThreshold
+    if (j.praise > 0.2) {
+      for (let w = 0; w < 3; w++) {
+        const ph = (t * 0.6 + w / 3) % 1
+        ctx.strokeStyle = `rgba(255,228,140,${(1 - ph) * j.praise * 0.5})`
+        ctx.lineWidth = 2
+        ctx.beginPath(); ctx.arc(marchX + 10, choirY - 16, 20 + ph * 120, -0.7, 0.7); ctx.stroke()
+      }
+    }
+    const singer = (x, lead) => {
+      const bob = praising ? Math.sin(t * 6 + x) * 2.5 : 0
+      ctx.fillStyle = lead ? '#f3e6c0' : '#f6f3ec'
+      ctx.fillRect(x - 4, choirY - 20 + bob, 8, 20)
+      ctx.fillStyle = '#e8bb8d'; ctx.beginPath(); ctx.arc(x, choirY - 24 + bob, 4.2, 0, Math.PI * 2); ctx.fill()
+      if (lead) { ctx.fillStyle = '#e8b53a'; ctx.fillRect(x - 4.5, choirY - 30 + bob, 9, 3) }
+      if (praising) {
+        ctx.strokeStyle = lead ? '#f3e6c0' : '#f6f3ec'; ctx.lineWidth = 3; ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.moveTo(x - 3, choirY - 16 + bob); ctx.lineTo(x - 8, choirY - 26 + bob)
+        ctx.moveTo(x + 3, choirY - 16 + bob); ctx.lineTo(x + 8, choirY - 26 + bob); ctx.stroke()
+        if (Math.sin(t * 4 + x) > 0.6) this._emoji('🎵', x, choirY - 32 + bob, 14)
+      }
+    }
+    singer(marchX, true)
+    singer(marchX - 18, false)
+    singer(marchX - 34, false)
+    ctx.fillStyle = '#3a5a8c'
+    for (let i = 0; i < 5; i++) {
+      const x = marchX - 58 - i * 11
+      const bob = Math.sin(t * 5 + i) * 1.5
+      ctx.fillRect(x - 2, choirY - 15 + bob, 5, 15)
+      ctx.beginPath(); ctx.arc(x, choirY - 18 + bob, 3, 0, Math.PI * 2); ctx.fill()
+    }
+
+    this._jehoshaphatHud(game, j)
+  }
+
+  // 聖歌奇兵 HUD:進度(隱基底→望樓)+ 三條(讚美 / 自亂 / 恐懼)+ 中央提示 + 操作提示。
+  _jehoshaphatHud(game, j) {
+    const ctx = this.ctx
+    const barW = 300, barH = 16, bx = (VIEW.W - barW) / 2
+    const hud = game.hudLabels || { start: '隱基底', goal: '望樓得勝 🏔️' }
+    let by = 30
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; roundRect(ctx, bx, by, barW, barH, 8); ctx.fill()
+    ctx.fillStyle = '#3a8d6b'; roundRect(ctx, bx, by, barW * j.advance, barH, 8); ctx.fill()
+    ctx.fillStyle = '#2a3a2a'; ctx.font = '600 15px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; ctx.fillText(hud.start, bx, by - 3)
+    ctx.textAlign = 'right'; ctx.fillText(hud.goal, bx + barW, by - 3)
+
+    by = 70
+    this._statBar(bx, by, barW, barH, j.praise, j.praise >= JEHOSHAPHAT.advanceThreshold ? '#2f9e44' : '#d6533b', '🎵 讚美值')
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(bx + barW * JEHOSHAPHAT.advanceThreshold - 1, by - 2, 2, barH + 4)
+    by = 104
+    this._statBar(bx, by, barW, barH, j.ambush, '#e8a13a', '⚔️ 敵軍自亂(滿 = 得勝)')
+    by = 138
+    this._statBar(bx, by, barW, barH, j.fear, '#c0392b', '😨 恐懼')
+
+    if (j.calm > 0.35) {
+      ctx.fillStyle = `rgba(214,83,59,${0.5 + 0.4 * Math.abs(Math.sin(j.time * 6))})`
+      ctx.font = '800 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText('不要爭戰,只管站穩——繼續讚美 🎵', VIEW.W / 2, VIEW.H * 0.46)
+    } else if (j.ambush > 0.6) {
+      ctx.fillStyle = `rgba(70,130,90,${0.5 + 0.35 * Math.abs(Math.sin(j.time * 5))})`
+      ctx.font = '800 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText('敵軍自相擊殺了!讚美不要停!', VIEW.W / 2, VIEW.H * 0.46)
+    }
+
+    ctx.font = '700 18px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(40,50,64,0.9)'
+    ctx.fillText('按住畫面 / 方向鍵 / 空白 = 帶領詩班讚美 🎵　·　你沒有攻擊鍵,打仗的是耶和華', VIEW.W / 2, VIEW.H - 12)
   }
 
   // 第三關「大魚肚內」畫面:漆黑的魚腹(肋骨、水、氣泡、禱告的約拿),

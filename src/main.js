@@ -10,9 +10,9 @@ game.boot()
 // 試玩捷徑(戰爭闖關原型,驗證手感用):網址加 ?level=moses 直接進「摩西舉手之戰」(出 17)。
 // 不影響正常六關流程——一般玩家看不到;之後要嵌入保羅大富翁則走 opts.level=7。
 try {
-  if (new URLSearchParams(location.search).get('level') === 'moses' && game.startMoses) {
-    game.startMoses()
-  }
+  const lv = new URLSearchParams(location.search).get('level')
+  if (lv === 'moses' && game.startMoses) game.startMoses()
+  else if (lv === 'jehoshaphat' && game.startJehoshaphat) game.startJehoshaphat()
 } catch {}
 
 // Service Worker 策略:

@@ -81,6 +81,29 @@ export const MOSES = {
   supportMinToStart: 0.15, // 耗盡後要回充到這個量才能再次扶手(避免在 0 附近閃爍)
 }
 
+// 戰爭闖關原型 #3「聖歌奇兵 · 約沙法唱詩得勝」(代下 20)——自成一格的場景(level === 9)。
+//   比照摩西「撐住一個會下滑的值」:按住=讚美(praise 回充),放開=下滑;
+//   持續讚美 → 詩班前進(advance)+ 敵軍自亂條(ambush)累積,ambush 滿 = 得勝;
+//   讚美斷 → 恐懼(fear)上升,fear 滿 = 潰散。沒有攻擊鍵——兵器只有讚美。
+//   調手感只動這裡:按住要明顯穩得住(praiseGain ≫ praiseDrain);難在「後段下滑加乘 + 隨機陣痛」。
+export const JEHOSHAPHAT = {
+  startPraise: 0.6, // 開場讚美值
+  startFear: 0.06, // 開場恐懼值
+  praiseGain: 0.95, // 按住「讚美」的回充速度(要明顯 > 下滑,按住就穩得住)
+  praiseDrain: 0.5, // 沒按住時讚美自然下滑速度
+  lateDrainMult: 1.5, // 敵軍自亂條接近滿(接近望樓)時下滑加乘——最後最吃緊
+  advanceThreshold: 0.4, // 讚美高於此 =「在讚美」→ 詩班前進 + 自亂條累積
+  advanceSpeed: 0.04, // 詩班走向望樓的速度(0..1 距離/秒;約 25 秒抵達)
+  ambushGrowth: 0.03, // 敵軍自亂條累積速度(穩定讚美約 33 秒填滿 = 得勝)
+  ambushDecay: 0.05, // 讚美斷掉時自亂條回退速度
+  fearThreshold: 0.28, // 讚美低於此 → 恐懼上升
+  fearGrow: 0.38, // 恐懼上升速度(完全不讚美約 3 秒潰散)
+  fearRecover: 0.6, // 讚美回來後恐懼回落速度(越大越好救=越簡單)
+  twingeInterval: 4.5, // 「會眾騷動/敵軍逼近」陣痛的平均間隔(秒)
+  twingeDrop: 0.5, // 陣痛對讚美的瞬間額外下滑強度
+  twingeFade: 0.9, // 陣痛消退速度
+}
+
 // 戰爭闖關原型 #2「紅海奔逃」(出 14)——自成一格的場景(level === 8),重用「跑酷/跳躍」手感。
 //   phase: stand(站住等候、海漸開)→ cross(過海床、跳障礙、追兵在後)→ closing(海合攏淹追兵)→ done。
 //   lead = 領先追兵的距離(px):乾淨奔跑會拉開(gapRecoverPerSec,上限 chaseGapMax),

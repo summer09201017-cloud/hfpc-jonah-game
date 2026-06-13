@@ -6,7 +6,8 @@ import { Input } from './input.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { Moses } from './moses.js'
-import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES } from './scripture.js'
+import { Jehoshaphat } from './jehoshaphat.js'
+import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES, JEHOSHAPHAT } from './scripture.js'
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
 const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach', GOURD: 'gourd' }
@@ -32,8 +33,8 @@ export class Game {
     this.onComplete = opts.onComplete || null
     // 嵌入支援全六關。注意：3/5/6 的卡片流程走 ui.showFish*/showPreach*/showGourd*——
     // 宿主(保羅)嵌入這幾關時，注入的 ui 必須實作這些卡片方法(EmbedUI)，純 NullUI 會卡在 intro。
-    // 嵌入白名單:1–6 為約拿六關;7 = 戰爭闖關原型「摩西舉手」(出 17,純 Canvas 關,NullUI 即可)
-    this.embedLevel = [1, 2, 3, 4, 5, 6, 7].includes(opts.level) ? opts.level : 1
+    // 嵌入白名單:1–6 為約拿六關;7 = 摩西舉手(出 17);9 = 聖歌奇兵(代下 20)——皆純 Canvas 關,NullUI 即可
+    this.embedLevel = [1, 2, 3, 4, 5, 6, 7, 9].includes(opts.level) ? opts.level : 1
     this.embedMode = opts.mode === 'walk' ? 'walk' : 'run'
     this._hudOverride = opts.hudLabels || null // 外層(保羅)注入的進度條地名；沒注入時各關用自己的預設(LEVELx.hud)
     this.hudLabels = this._hudOverride || { ...LEVEL1.hud }
@@ -41,6 +42,7 @@ export class Game {
     this.spawner = new Spawner()
     this.storm = new Storm(this)
     this.moses = new Moses(this) // 戰爭闖關原型(出 17);level === 7
+    this.jehoshaphat = new Jehoshaphat(this) // 戰爭闖關原型(代下 20);level === 9
     this.state = STATE.TITLE
     this.level = 1 // 1=約帕港口(跑酷) / 2=暴風雨(平衡) / 3=大魚肚(默想) / 4=上岸→尼尼微(跑酷)
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
@@ -71,6 +73,7 @@ export class Game {
       else if (this.embedLevel === 5) this.startPreach()
       else if (this.embedLevel === 6) this.startGourd()
       else if (this.embedLevel === 7) this.startMoses()
+      else if (this.embedLevel === 9) this.startJehoshaphat()
       else this.start(this.embedMode)
       requestAnimationFrame((t) => this.loop(t))
       return
@@ -194,9 +197,25 @@ export class Game {
     Audio.stopMusic()
   }
 
+  // 戰爭闖關原型「聖歌奇兵 · 約沙法唱詩得勝」(代下 20):重用摩西的「撐住」引擎(self-contained 場景)。
+  // 單機由 ?level=jehoshaphat 進;嵌入由 opts.level=9 進。敵軍自亂條滿=過關,恐懼滿=失敗。
+  startJehoshaphat() {
+    this._enterImmersive()
+    this.level = 9
+    this.jehoshaphat.reset()
+    // 進度條兩端文字走 hudLabels(嵌入契約):外層有注入用注入的,否則用 JEHOSHAPHAT 預設(隱基底→望樓)
+    this.hudLabels = this._hudOverride || { ...JEHOSHAPHAT.hud }
+    this.ui.hide()
+    this.state = STATE.PLAYING
+    this.ui.showPauseButton()
+    Audio.unlock()
+    Audio.stopMusic()
+  }
+
   // 重玩目前這一關(失敗/暫停→重新開始 用)
   restartCurrent() {
-    if (this.level === 7) this.startMoses()
+    if (this.level === 9) this.startJehoshaphat()
+    else if (this.level === 7) this.startMoses()
     else if (this.level === 6) this.startGourd()
     else if (this.level === 5) this.startPreach()
     else if (this.level === 4) this.startNineveh(this.mode)
@@ -207,7 +226,8 @@ export class Game {
 
   // 進入下一關
   next() {
-    if (this.level === 7) this.startMoses() // 戰爭原型:再玩一次(不接約拿關鏈)
+    if (this.level === 9) this.startJehoshaphat() // 戰爭原型:再唱一次(不接約拿關鏈)
+    else if (this.level === 7) this.startMoses() // 戰爭原型:再玩一次(不接約拿關鏈)
     else if (this.level === 1) this.startStorm()
     else if (this.level === 2) this.startFish()
     else if (this.level === 3) this.startNineveh('run') // 大魚肚 → 上岸往尼尼微(跑酷)
@@ -263,6 +283,11 @@ export class Game {
     // 戰爭闖關原型「摩西舉手」(出 17)自成一格,交給 Moses 場景處理
     if (this.level === 7) {
       this.moses.step(dt)
+      return
+    }
+    // 戰爭闖關原型「聖歌奇兵」(代下 20)自成一格,交給 Jehoshaphat 場景處理
+    if (this.level === 9) {
+      this.jehoshaphat.step(dt)
       return
     }
 
@@ -493,6 +518,16 @@ export class Game {
     Audio.stopMusic()
     Audio.sfx('win')
     if (this.embed) return this._finish(true)
+    if (this.level === 9) {
+      // 戰爭闖關原型「聖歌奇兵」:敵軍自亂條滿得勝。原型不接約拿關鏈——「下一關」= 再唱一次。
+      this.ui.showWin(JEHOSHAPHAT, null, {
+        showCoins: false,
+        nextLabel: '🔁 再唱一次',
+        nextEnabled: true,
+        progress: '戰爭闖關原型 · 聖歌奇兵(代下 20)',
+      })
+      return
+    }
     if (this.level === 7) {
       // 戰爭闖關原型「摩西舉手」:撐到日落得勝。原型不接約拿關鏈——「下一關」= 再玩一次。
       this.ui.showWin(MOSES, null, {
@@ -536,7 +571,15 @@ export class Game {
     Audio.sfx('lose')
     if (this.embed) return this._finish(false)
     this.ui.showLose(
-      this.level === 7 ? MOSES : this.level === 2 ? LEVEL2 : this.level === 4 ? LEVEL4 : LEVEL1
+      this.level === 9
+        ? JEHOSHAPHAT
+        : this.level === 7
+          ? MOSES
+          : this.level === 2
+            ? LEVEL2
+            : this.level === 4
+              ? LEVEL4
+              : LEVEL1
     )
   }
 
