@@ -1,0 +1,124 @@
+============================================================
+讀我 — HANDOFF（給 agape250 那台 PC 的 AI / 開發者）
+更新：2026-06-14（HFP 機）。接手請先讀這份整段，再進各 repo 讀 CLAUDE.md / roadmap.md。
+============================================================
+
+■ 現況一句話（2026-06-14）
+  暑假兒童營主題「逆轉奇兵」的【五個奇兵】程式全部做完(3 卡片關 + 2 動作關),
+  外加總入口大廳的「合輯卡片 + 分組計分板」。全部在 feature branch、已推 GitHub,
+  **尚未併 main、尚未部署**——等牧者實測/審題通過才上線。GitHub 是唯一真相;
+  桌面 zip 只是備援快照。
+
+■ 三個 repo + 分支地圖（都在 GitHub：summer09201017-cloud）
+  ┌ repo ─────────────┬ 分支 ───────────────┬ 內容 / 狀態 ──────────────────────────┐
+  │ hfpc-bible-games   │ main(已部署)        │ 總入口大廳。新增「戰爭闖關合輯」「逆轉奇兵」兩張   │
+  │ (大廳)             │                     │ 合輯卡片(hash 路由 #/war、#/reversal,就地展開)  │
+  │                    │                     │ + 「🏆 分組計分板」(/#scoreboard,localStorage)。 │
+  │                    │                     │ Live: hfpc-bible-games.netlify.app                │
+  ├────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ hfpc-paul-game     │ main(已部署)        │ 大衛甩石已併 main(?demo=sling)。                  │
+  │ (保羅大富翁,React) │ feat/cornelius-card │ ★三個卡片奇兵:福音 ?demo=cornelius / 盼望 ?demo= │
+  │                    │   (未併,待審)       │ elijah / 大光 ?demo=saul。共用 src/minigames/cards/ │
+  │                    │                     │ (CardGame.jsx 播放器 + specs.js 內容);內建 emoji  │
+  │                    │                     │ 小劇場動畫 + 分數比賽 + 🏆得勝結算 + 單獨玩全螢幕。 │
+  ├────────────────────┼─────────────────────┼───────────────────────────────────────────────────┤
+  │ hfpc-jonah-game    │ main(舊,28ccf8f)    │ 約拿六關(已上線,未動)。                          │
+  │ (約拿/動作引擎)    │ feat/moses          │ 摩西舉手 ?level=moses(level 7)                     │
+  │                    │ feat/jehoshaphat    │ = moses + 聖歌奇兵 ?level=jehoshaphat(level 9)     │
+  │                    │ feat/balaam(最新)   │ = moses + 聖歌 + 反轉奇兵 ?level=balaam(level 10)  │
+  └────────────────────┴─────────────────────┴───────────────────────────────────────────────────┘
+  ⚠ 戰爭/動作關**別 push 到約拿 main**(會自動部署、把原型曝光)。永久家=之後搬進保羅 repo 嵌入。
+  ⚠ 約拿 level 編號:7=摩西、8=紅海(REDSEA,設計稿已備、redsea.js 未寫,**8 已預留**)、
+     9=聖歌、10=反轉。要再加動作關用 11 起。
+
+■ 逆轉奇兵【五個奇兵】總表（營會五天主題,得勝靠倚靠神不靠自己——反向 RPG DNA）
+  ┌ 奇兵 ────┬ 經文 ─┬ 形式 ┬ 引擎/位置 ──────────────┬ 試玩 ───────────────┬ 狀態 ┐
+  │ 🕊️福音   │ 徒10  │ 卡片 │ 保羅 cards(cornelius)    │ ?demo=cornelius      │ ✅完成+全動畫 │
+  │ 🌅盼望   │ 王上19│ 卡片 │ 保羅 cards(elijah)       │ ?demo=elijah         │ ✅完成+全動畫 │
+  │ 💡大光   │ 徒9   │ 卡片 │ 保羅 cards(saul)         │ ?demo=saul           │ ✅完成+全動畫 │
+  │ 🎵聖歌   │ 代下20│ 動作 │ 約拿 jehoshaphat.js(L9)  │ ?level=jehoshaphat   │ ✅完成 │
+  │ 🫏反轉   │ 民22  │ 動作 │ 約拿 balaam.js(L10)      │ ?level=balaam        │ ✅完成 │
+  └──────────┴───────┴──────┴──────────────────────────┴──────────────────────┴──────┘
+  雙擊啟動:保羅 play-cornelius/elijah/saul.bat;約拿 play-jehoshaphat/balaam/moses.bat
+  (.bat 一律純英文 ASCII + CRLF;啟動用 `npm run dev -- --open "/?demo=KEY"`,別寫 >/dev/null,要 nul)。
+
+■ 卡片關玩法(三個卡片奇兵共用,改一筆 spec 就多一關)
+  • 不會輸:答錯溫柔重試;step 三種 kind:info/question/order(沒有 match,配對改用 question/order)。
+  • emoji 小劇場(scene):walk/lift/speak/flash/fall/rise/cycle/drop/pulse + caption 說話小字;
+    進場從下方緩緩升起、選項加 1️⃣2️⃣3️⃣ 號碼、答對 ✨🎉。
+  • 分數比賽:第一次答對 3 分/第二次 2/第三次以後 1(都有分);右上常駐⭐;結尾「🏆得勝!」+ 金句大畫面。
+  • 單獨玩 ?demo=<key>(全螢幕淺底大字,投影用,右上 ⛶ 全螢幕鈕)——詳見新 skill card-flow-minigame。
+  • 動作關(聖歌/反轉)比照摩西「撐住一個會下滑的值」/「閃避移動」,自成一格場景,嵌入白名單已加。
+
+■ 兒童營現場(影響所有設計)
+  • 我們有很多教室,每間都有電腦 + 投影機 → 可「分站輪流」:每間教室一台 PC+投影開一個奇兵
+    (各奇兵都有獨立 ?demo=/?level= 入口 + .bat,天生支援分站)。或「大螢幕全隊玩」一人操作全場喊。
+  • 小學生**不能用手機**;單機、鍵盤優先(↑↓/空白/方向鍵)、短局、大字、響亮音效、**全離線**、結算大畫面。
+  • 分組計分:大廳「🏆 分組計分板」(localStorage)記各組分數;老師把卡片關得分加進該組做競賽。
+  • 營會時間:約 2026 年 7 月初(距今約 3 週)。守住「綠色必交」即穩,做不完的關那天用實體團康補。
+
+■ 已完成 vs 真正待做
+  ✅ 已完成(本日 2026-06-14):
+     - 大廳兩張合輯卡片(戰爭闖關/逆轉奇兵,零複製、深連結指向既有關卡)+ 分組計分板,已部署。
+     - 大衛甩石併 main 部署(?demo=sling)。
+     - 五個奇兵全做完(3 卡片 + 2 動作),各有 ?demo=/?level= + .bat;卡片關加動畫+分數+得勝畫面。
+     - 摩西關 commit 保命(feat/moses);版本漂移地雷解除。
+     - 新 skill:card-flow-minigame(卡片關框架,跨專案)。
+  🔜 真正待做(依優先):
+     1. 【生死線】牧者審題 + 實測:三個卡片奇兵文案(福音/盼望/大光)+ 聖歌/反轉手感。建議一批送審
+        (scripts/export-quiz-review.mjs --cards=src/minigames/cards/specs.js 可印清單)。
+     2. 通過後:把卡片奇兵 feat/cornelius-card 併 paul main(自動部署);把聖歌/反轉「搬進保羅 repo」當嵌入關
+        (永久家;別把約拿原型 push 約拿 main)→ 再把大廳「逆轉奇兵」五張卡的 soon 拿掉、補 ?demo=/?level= 連結。
+     3. 真機離線實測:在「那台要投影的教室電腦」裝好、關網路,五個奇兵各跑一遍、確認投影字夠大、鍵盤合用。
+     4. 紅海奔逃(REDSEA,設計稿+config/scripture 已備,redsea.js 未寫,level 8)——若還想多一個動作關。
+
+■ 🚀 接下來可做的(按 CP 值高→低 × 開發時間短→長 排序)
+  【半天內、立刻有感】
+   1. 把卡片奇兵的「得分」自動丟進大廳分組計分板(目前老師手動加)——cross-origin 無法自動,
+      可改「同一頁嵌入卡片關 + 計分板」或結尾顯示大字分數讓老師按。~半天。CP 高。
+   2. 通關證書/獎狀畫面(名字+奇兵+金句,可截圖列印)。~2-3hr。
+   3. 全奇兵「啟動選單頁」一張(像大廳但離線本機版,連五個 ?demo=/?level=)。~2-3hr。
+   4. 老師一鍵檢查 .bat(跑 npm test + 印「今天可上課 ✓」)。~1hr。
+  【1-2 天、明顯加值】
+   5. 聖歌/反轉「搬進保羅」嵌入關(embed-minigame 路線),讓動作關也能在桌遊裡當站點。~1 天。
+   6. 金句收集冊/圖鑑(答對收金句貼紙,localStorage)。~1 天。
+   7. 錯題班級報告(哪題最多人錯)。~半天。
+  【大型、之後再說】
+   8. 紅海奔逃動作關收尾(redsea.js + _drawRedSea)。~1 週。
+   9. 把「逆轉奇兵」做成第六條保羅旅程 / 獨立書卷(bible-game-scaffold)。~1 週+。
+  10. 真實美術 PNG(美術是瓶頸;renderer 已隔離,可後換)。~2-3 天+美術。
+
+■ 🧩 Skill（已做 + 建議再做）
+  ✅ 新增 card-flow-minigame(本日):卡片流程闖關框架(CardGame+specs+scene 動畫+單獨玩+嵌入)。
+     可改進:把「分數/得勝畫面/號碼選項」也寫進 skill 範本(已在程式,skill 文件可補一段)、
+     加一個 scene motion 速查表 + 一鍵新關 scaffold 腳本。
+  建議再做(CP 高):
+   • reverse-rpg-design skill — 把「得勝靠倚靠值、不靠攻擊力」的反向 RPG 設計心法寫成跨書卷 skill
+     (五奇兵 + 摩西/約沙法 + 道具=經文教學,都是活範例)。~半天。對「下一卷書」最有槓桿。
+   • classroom-hub / camp-scoreboard skill — 把大廳「合輯卡片 + 分組計分板 + 深連結」寫成跨專案 skill
+     (hfpc-bible-games 是活範例);分站/輪流/離線的營會場景守則。~半天。
+   • quiz-authoring skill — 「幫我出某卷書 N 題 + 自動跑 validator + 產送審清單」,直擊最大瓶頸(審題)。~半天。
+  既有 skill 可改進:embed-minigame 補「卡片關(非 Canvas)如何嵌入」一節;classroom-game-deploy 補
+     「多教室分站 + 每站一個 ?demo=/?level=」的營會佈署清單。
+
+■ ⚠ 地雷（接手務必守）
+  1. GitHub 是唯一真相;一律在 git 工作樹裡工作、文件跟程式一起 commit;zip 只是備援。動手前先確認在哪個分支。
+  2. 戰爭/動作關別 push 約拿 main(會自動部署曝光);卡片奇兵文案未過牧者審別併 paul main(會自動部署)。
+  3. .bat 純英文 ASCII + CRLF;啟動用 `npm run dev -- --open "/?demo=KEY"`;**別寫 Unix 的 >/dev/null,要 nul**。
+  4. 卡片 spec 的 answer 不可越界(最常見致命錯)——過 game-content-validator / npm test。
+  5. agape250 機的 vite build 偶爾無聲死掉(exit 127):先手動刪 dist/ 再 build;或重跑一次。約拿 npm run build 是逐檔複製不受影響。
+  6. 約拿 level:7 摩西、8 紅海(預留)、9 聖歌、10 反轉。
+
+■ 怎麼跑 / 怎麼測
+  保羅(React+Vite):npm install → npm run dev(:5173)。測:npm test(validate+selfplay+smoke)、
+     npm run build。卡片奇兵單獨玩:?demo=cornelius / elijah / saul。
+  約拿(vanilla):npm install → npm run dev。測:npm test(:~2s)、npm run test:offline(+build+PWA 離線)。
+     動作奇兵單獨玩:?level=jehoshaphat / balaam / moses。npm run build = 逐檔複製到 site/(不是 vite build)。
+  大廳:npm run dev;npm test。push main 自動部署 Netlify。
+
+■ 接手第一步
+  1. git clone/pull 三個 repo;`git fetch --all` 看 feature branch(cornelius-card / moses / jehoshaphat / balaam)。
+  2. 各 repo 讀 CLAUDE.md → roadmap.md → README.md;跨專案現況讀本檔。
+  3. 把 claude-skills（含新的 card-flow-minigame）裝進 C:\Users\<帳號>\.claude\skills\。
+  4. 第一優先:約牧者一批審題(卡片奇兵文案 + 動作關手感),通過才往「併 main / 搬進保羅 / 大廳拿掉 soon」走。
+============================================================
