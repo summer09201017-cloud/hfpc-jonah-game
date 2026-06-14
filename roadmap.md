@@ -1,8 +1,19 @@
 # roadmap.md — 約拿闖關 (Jonah Game)
 
-> 對齊現況 **2026-06-13**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
-> 線上版:**https://hfpc-jonah-game.netlify.app/** ・ GitHub:`summer09201017-cloud/hfpc-jonah-game`(branch `main`)。
-> 🆕 **完整的三專案現況、戰爭關進度與 CP 值功能清單,見 `讀我-HANDOFF.txt`(2026-06-13)。**
+> 對齊現況 **2026-06-14 晚**。給接手的 AI / 開發者:先讀本檔的「已完成 vs 真正待做」,再讀 `CLAUDE.md`(架構與地雷)。
+> 線上版:**https://hfpc-jonah-game.netlify.app/** ・ GitHub:`summer09201017-cloud/hfpc-jonah-game`。
+> 🆕 **完整的三專案現況、部署閘與 CP 值功能/skill/Tool 清單,見 `讀我-HANDOFF.txt`(2026-06-14 晚)。**
+
+---
+
+## 🆕 2026-06-14 晚（branch `feat/balaam`，未併 main）
+
+- **逆轉奇兵兩動作關完成 + 升級**:聖歌(`?level=jehoshaphat`,L9)、反轉(`?level=balaam`,L10)。
+  人物放大重繪 + 表情;反轉的驢重畫(長耳/長臉/尾巴,不像豬)+ 天使/巴蘭表情 + 葡萄園泥石路加寬;聖歌標「以色列 vs 敵軍」旗標。
+- **兩關各加 3 條命、會輸**;**失敗畫面修正**:輸了清楚問「要再玩一次嗎? 🔁」(原本按住的方向鍵會把畫面瞬間跳過,已加 ~0.8 秒緩衝)。
+- **嵌入白名單加 9/10**:聖歌/反轉可被保羅大富翁嵌入當站點(永久家路線)。
+- 反轉難度上調(使者數量加倍、間隔下限調低)。`npm test` 112 項全綠。
+- ⚠ 仍**別 push 約拿 main**(原型曝光);永久家=搬進保羅 repo 嵌入。
 
 ---
 

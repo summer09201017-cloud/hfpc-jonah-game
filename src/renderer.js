@@ -1041,6 +1041,20 @@ export class Renderer {
     // 失去一條命的紅閃
     if (j.lifeFlash > 0.05) { ctx.fillStyle = `rgba(200,60,40,${j.lifeFlash * 0.22})`; ctx.fillRect(0, 0, VIEW.W, VIEW.H) }
 
+    // 「哈利路亞!」讚美字幕(讚美時隨節拍跳出,像投影歌詞——帶全場一起唱;代下 20:21「稱謝耶和華」)
+    if (praising) {
+      const pulse = Math.max(0, Math.sin(((t * 0.62) % 1) * Math.PI)) // 與讚美詩節拍同步的淡入淡出(每約 1.6s 一次)
+      if (pulse > 0.02) {
+        ctx.save()
+        ctx.globalAlpha = pulse
+        ctx.font = `800 ${34 + pulse * 10}px "Noto Sans TC","Microsoft JhengHei",sans-serif`
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+        ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(60,40,10,0.6)'; ctx.strokeText('哈利路亞!', VIEW.W / 2, VIEW.H * 0.3)
+        ctx.fillStyle = '#ffd84a'; ctx.fillText('哈利路亞!', VIEW.W / 2, VIEW.H * 0.3)
+        ctx.restore()
+      }
+    }
+
     this._jehoshaphatHud(game, j)
   }
 
@@ -1095,9 +1109,9 @@ export class Renderer {
     const b = game.balaam
     const t = b.time
     const lerp = (a, c, k) => a + (c - a) * k
-    // 路面加寬 ×2:道路帶由原本 ~90px 拉高到 ~180px(純視覺;碰撞在正規化空間,難度不變)
+    // 道路帶高度(純視覺;碰撞在正規化空間)。2026-06-14:180→150,路看起來窄一點。
     const bandBot = VIEW.H - 18
-    const bandTop = bandBot - 180
+    const bandTop = bandBot - 150
     const horizonY = bandTop - 18
     const yOf = (ny) => lerp(bandTop, bandBot, ny)
 
@@ -1158,7 +1172,7 @@ export class Renderer {
     this._balaamHud(game, b)
   }
 
-  // 拔刀的耶和華使者(白袍 + 翅膀 + 光環 + 舉刀)
+  // 拔刀的耶和華使者(白袍 + 翅膀 + 光環 + 舉刀)。2026-06-14:回原大小(刀刃仍加長 1.5,見下)。
   _angel(x, y, t) {
     const ctx = this.ctx
     ctx.save(); ctx.translate(x, y)
@@ -1175,9 +1189,9 @@ export class Renderer {
     ctx.beginPath(); ctx.moveTo(-6, -50.5); ctx.lineTo(-1.5, -48.5); ctx.moveTo(5, -50.5); ctx.lineTo(0.5, -48.5); ctx.stroke()
     ctx.strokeStyle = '#7a5a44'; ctx.beginPath(); ctx.moveTo(-3, -42.5); ctx.lineTo(2.5, -42.5); ctx.stroke()
     ctx.strokeStyle = '#e8c34a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -55, 7, 0, Math.PI * 2); ctx.stroke()
-    // 拔出來的刀
+    // 拔出來的刀(2026-06-14:刀刃加長 1.5 倍——終點 (26,-54)→(33,-67),沿原方向延伸)
     ctx.strokeStyle = '#cfd6df'; ctx.lineWidth = 3; ctx.lineCap = 'round'
-    ctx.beginPath(); ctx.moveTo(12, -28); ctx.lineTo(26, -54); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(12, -28); ctx.lineTo(33, -67); ctx.stroke()
     ctx.strokeStyle = '#8a939e'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(9, -24); ctx.lineTo(15, -30); ctx.stroke()
     ctx.restore()
   }
@@ -1282,8 +1296,9 @@ export class Renderer {
     by = 58
     const tleft = Math.max(0, 1 - b.time / BALAAM.duration)
     this._statBar(bx, by, barW, 10, tleft, tleft < 0.25 ? '#d6533b' : '#caa83a', '⏳ 時間')
-    // 命:左上角 3 顆心(被使者擋住、巴蘭鞭打驢 = 扣一條;民 22「你三次打我」)
-    for (let i = 0; i < 3; i++) this._emoji(i < (b.lives ?? 3) ? '❤️' : '🤍', 34 + i * 34, 40, 26, 'middle')
+    // 命:左上角心數(被使者擋住、巴蘭鞭打驢 = 扣一條;數量依 config.BALAAM.lives,2026-06-14:3→5)
+    const maxL = b.maxLives ?? 3
+    for (let i = 0; i < maxL; i++) this._emoji(i < (b.lives ?? maxL) ? '❤️' : '🤍', 34 + i * 30, 40, 24, 'middle')
     if (b.balking) {
       ctx.fillStyle = `rgba(214,83,59,${0.55 + 0.35 * Math.abs(Math.sin(b.time * 7))})`
       ctx.font = '800 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'

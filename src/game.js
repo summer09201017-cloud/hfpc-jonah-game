@@ -152,7 +152,7 @@ export class Game {
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock() // 在使用者手勢(按開始)中解鎖音訊
-    Audio.startMusic()
+    Audio.startMusic('level')
   }
 
   // 第四關 上岸→尼尼微:重用第一關跑酷引擎,換主題(曠野→尼尼微大城)、無船價門檻。
@@ -171,7 +171,7 @@ export class Game {
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock()
-    Audio.startMusic()
+    Audio.startMusic('level')
   }
 
   startStorm() {
@@ -212,7 +212,7 @@ export class Game {
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock()
-    Audio.stopMusic()
+    Audio.startMusic('hymn') // 聖歌奇兵要「真的唱聖歌」:放莊嚴讚美詩(代下 20 約沙法唱詩得勝),不像戰場關靜音
   }
 
   // 戰爭闖關原型「反轉奇兵 · 巴蘭的驢」(民 22):自成一格的閃避場景。

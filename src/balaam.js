@@ -25,7 +25,8 @@ export class Balaam {
     this.bumpFlash = 0 // 撞擊閃光 / 鞭打 0..1
     this.bumpCool = 0
     this.bumps = 0 // 被鞭打次數(劇情味)
-    this.lives = 3 // 3 條命:每被使者擋住、巴蘭鞭打驢一次扣 1(民 22「你三次打我」);扣完 = 闖了禍(失敗)
+    this.maxLives = BALAAM.lives ?? 3
+    this.lives = this.maxLives // 命數(config.BALAAM.lives):每被使者擋住、巴蘭鞭打驢一次扣 1;扣完 = 闖了禍(失敗)
     this.donkeyTremble = 0
     this.done = false
   }
@@ -55,7 +56,7 @@ export class Balaam {
     // ---- 生成使者(從右邊進場,落在某條路上)----
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0) {
-      const interval = Math.max(0.7, C.spawnInterval - C.spawnRampPerSec * this.time)
+      const interval = Math.max(0.5, C.spawnInterval - C.spawnRampPerSec * this.time) // 下限 0.7→0.5(2026-06-14:配合數量加倍)
       this.spawnTimer = interval * (0.7 + Math.random() * 0.6)
       const y = C.roadTop + Math.random() * (C.roadBot - C.roadTop)
       const sp = C.angelSpeedMin + Math.random() * (C.angelSpeedMax - C.angelSpeedMin)

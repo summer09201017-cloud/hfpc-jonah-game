@@ -18,7 +18,7 @@ GitHub: `https://github.com/summer09201017-cloud/hfpc-jonah-game`(branch `main`)
 1. **`ui` 由外部注入,不要 `import './ui.js'`。** `game.js` 收 `new Game(canvas, opts)`:單機由 `main.js` 傳 `{ ui: new UI() }`;嵌入由保羅傳空殼 `NullUI`。**若你在 `game.js` 重新 `import { UI } from './ui.js'`,同步腳本會中止並報「嵌入契約被破壞」**——請改回注入。
 2. **`embed` 旗標**(預設 `false`,所以單機行為完全不變):`opts.embed` 為 true 時跳過標題、直接開 `opts.level`、結束呼叫 `opts.onComplete({won,score,level})`;`loop()` 受 `this.stopped` 控制;`destroy()` 會停迴圈+`input.detach()`+停音樂。
 3. **HUD 進度條兩端文字走 `this.hudLabels`**:外層注入存在 `this._hudOverride`,各關 `startX()` 用 `this.hudLabels = this._hudOverride || { ...LEVELx.hud }` 的形式設定(有注入用注入的,否則用該關預設);`renderer.js` 讀 `game.hudLabels`,別寫死地名。
-4. **嵌入支援全六關 + 戰爭關原型**(`embedLevel` 白名單 `[1..7]`;7 = 戰爭闖關「摩西舉手」,2026-06-13 起),分兩類:
+4. **嵌入支援全六關 + 戰爭/逆轉關原型**(`embedLevel` 白名單 `[1,2,3,4,5,6,7,9,10]`;7=摩西舉手、9=聖歌奇兵、10=反轉奇兵,2026-06-14 起可嵌入保羅),分兩類:
    - **1/2/4(純 Canvas 關)**:宿主注入空殼 `NullUI` 即可。
    - **3/5/6(卡片流程關)**:卡片走 `ui.showFishIntro/Question/Reveal/TryAgain`、`showPreach*`、`showGourd*`,宿主必須注入**會畫卡片的 EmbedUI**——保羅的 `MiniGameModal.jsx` 用 React 卡片實作了這組方法,按鈕直接呼叫 `game.handleFishAction/handlePreachAction/handleGourdAction(act, ds)`;純 NullUI 會停在 intro 不動。完成點 `_fishWin/_preachWin/_gourdWin` 都有 `if (this.embed) return this._finish(true)`(這三關不會失敗)。
    新關卡要可嵌入:過關/失敗走有嵌入分支的結束函式,把關號加進白名單與 `boot()` 派發;若有卡片流程,同步在保羅 EmbedUI 補對應方法。
@@ -108,6 +108,11 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
     config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作=按住舉手、亞倫戶珥手垂時自動扶。
   - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config/scripture `REDSEA` 就緒,`redsea.js`(level 8)+ `_drawRedSea` 待寫。
   - ⚠ 戰爭關**別 push 到約拿 `main`**(會自動部署、把原型曝光);永久家=驗證後搬進保羅 repo。詳見 `讀我-HANDOFF.txt`。
+- 🆕 **(2026-06-14)逆轉奇兵兩動作關完成 + 畫面/手感升級**:
+  - ✅ **#3 聖歌奇兵**(代下 20,`?level=jehoshaphat`)、**#4 反轉奇兵**(民 22,`?level=balaam`)：人物放大重繪 + 表情、反轉的驢重畫(長耳不像豬)+ 天使/巴蘭表情 + 泥石路加寬、聖歌標示「以色列 vs 敵軍」陣營旗標。
+  - ✅ **兩關各加 3 條命、會輸**:聖歌恐懼滿一次扣命、反轉被使者擋住鞭打驢一次扣命(民 22「你三次打我」)。
+  - ✅ **失敗畫面修正**:動作關都按住方向鍵在玩,一輸時那顆按住的 ↑ 會把失敗畫面瞬間跳過——`gameOver` 後給 ~0.8 秒緩衝才接受重玩,`showLose` 明確顯示「要再玩一次嗎? 🔁」。
+  - ✅ **9/10 已加入嵌入白名單**:聖歌/反轉現在可被保羅大富翁嵌入當站點(永久家路線)。
 - 🆕 **(2026-06-13)總入口大廳 `hfpc-bible-games` 已上線**(獨立 repo + Netlify,卡片牆連到各遊戲;**不含遊戲**)。
 - 🔜 待做:戰爭關紅海收尾與手感微調;**真實手機離線實測**(自動檢查已綠,仍建議裝一台確認);
   (可選)真實美術 PNG sprite、約拿地圖改真實地理。
