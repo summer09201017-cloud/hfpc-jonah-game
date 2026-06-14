@@ -7,13 +7,30 @@ const canvas = document.getElementById('game')
 const game = new Game(canvas, { ui: new UI() })
 game.boot()
 
-// 試玩捷徑(戰爭闖關原型,驗證手感用):網址加 ?level=moses 直接進「摩西舉手之戰」(出 17)。
-// 不影響正常六關流程——一般玩家看不到;之後要嵌入保羅大富翁則走 opts.level=7。
+// 試玩捷徑(戰爭闖關原型):網址加 ?level=moses / jehoshaphat / balaam 直接進該關。
+// ⚠ 全螢幕只能在「使用者手勢」中觸發,所以不在載入時自動開關卡(否則 requestFullscreen 會被擋,
+//   就會「有橫式卻無法全螢幕」)。改成先顯示「點擊開始」大鈕,在那個點擊裡才開關卡 → 全螢幕生效。
+//   (正常六關本來就是點標題「開始」才進關,所以一向正常;這裡是補上捷徑缺的那個手勢。)
 try {
   const lv = new URLSearchParams(location.search).get('level')
-  if (lv === 'moses' && game.startMoses) game.startMoses()
-  else if (lv === 'jehoshaphat' && game.startJehoshaphat) game.startJehoshaphat()
-  else if (lv === 'balaam' && game.startBalaam) game.startBalaam()
+  const starter = { moses: 'startMoses', jehoshaphat: 'startJehoshaphat', balaam: 'startBalaam' }[lv]
+  if (starter && typeof game[starter] === 'function') {
+    if (game.ui && game.ui.hide) game.ui.hide() // 蓋掉預設的第一關標題
+    const gate = document.createElement('div')
+    gate.setAttribute('style', 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#0e1726;')
+    const btn = document.createElement('button')
+    btn.textContent = '點擊開始 ▶'
+    btn.setAttribute('style', 'padding:18px 44px;font-size:26px;font-weight:700;color:#fff;background:#c0392b;border:none;border-radius:16px;cursor:pointer;font-family:system-ui;-webkit-tap-highlight-color:transparent;')
+    gate.appendChild(btn)
+    document.body.appendChild(gate)
+    const go = () => {
+      window.removeEventListener('keydown', go)
+      gate.remove()
+      game[starter]() // 在使用者手勢中 → _enterImmersive 的全螢幕+鎖橫向才會被允許
+    }
+    btn.addEventListener('click', go, { once: true })
+    window.addEventListener('keydown', go)
+  }
 } catch {}
 
 // Service Worker 策略:
