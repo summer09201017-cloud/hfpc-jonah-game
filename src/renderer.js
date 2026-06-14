@@ -894,6 +894,17 @@ export class Renderer {
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom'; ctx.fillText(label, x, y - 3)
   }
 
+  // 浮在角色上方的小旗標(標示陣營:以色列 / 敵軍),帶向下小三角指向隊伍。
+  _banner(cx, top, text, color) {
+    const ctx = this.ctx
+    ctx.font = '700 15px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    const w = ctx.measureText(text).width + 20, h = 23, x = cx - w / 2
+    ctx.fillStyle = color; roundRect(ctx, x, top, w, h, 7); ctx.fill()
+    ctx.beginPath(); ctx.moveTo(cx - 6, top + h); ctx.lineTo(cx + 6, top + h); ctx.lineTo(cx, top + h + 8); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    ctx.fillText(text, cx, top + h / 2)
+  }
+
   // 戰爭闖關「聖歌奇兵 · 約沙法」(代下 20):谷中三國聯軍自相殘殺、詩班走在軍前往望樓。
   _drawJehoshaphat(game) {
     const ctx = this.ctx
@@ -947,28 +958,32 @@ export class Renderer {
       for (let i = 0; i < 4; i++) {
         const idx = zi * 4 + i
         const down = idx / 12 < j.ambush
-        const x = z.x + (i - 1.5) * 12
+        const x = z.x + (i - 1.5) * 18
         ctx.fillStyle = z.c
         if (down) {
-          ctx.save(); ctx.translate(x, valleyY); ctx.rotate(1.4)
-          ctx.fillRect(-3, -9, 6, 15); ctx.beginPath(); ctx.arc(0, -12, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.restore()
+          ctx.save(); ctx.translate(x, valleyY + 4); ctx.rotate(1.4)
+          ctx.fillRect(-4, -12, 9, 22); ctx.beginPath(); ctx.arc(0, -16, 4.6, 0, Math.PI * 2); ctx.fill(); ctx.restore()
         } else {
           const bob = Math.sin(t * 7 + idx) * 2
-          ctx.fillRect(x - 3, valleyY - 16 + bob, 6, 16)
-          ctx.beginPath(); ctx.arc(x, valleyY - 19 + bob, 3.2, 0, Math.PI * 2); ctx.fill()
-          ctx.strokeStyle = z.c; ctx.lineWidth = 2
-          ctx.beginPath(); ctx.moveTo(x + 3, valleyY - 13 + bob); ctx.lineTo(x + 10, valleyY - 22 + bob); ctx.stroke()
+          const by = valleyY - 24 + bob
+          ctx.fillRect(x - 4, by, 9, 24)
+          ctx.beginPath(); ctx.arc(x, by - 4, 4.6, 0, Math.PI * 2); ctx.fill()
+          ctx.fillStyle = '#1a1414'; ctx.fillRect(x - 2.6, by - 5.2, 1.7, 1.7); ctx.fillRect(x + 0.9, by - 5.2, 1.7, 1.7) // 兇惡小眼
+          ctx.strokeStyle = '#cfd6df'; ctx.lineWidth = 2.5; ctx.lineCap = 'round' // 互砍的刀
+          ctx.beginPath(); ctx.moveTo(x + 4.5, by + 4); ctx.lineTo(x + 15, by - 11); ctx.stroke()
         }
       }
     })
     if (j.ambushFlash > 0.05) {
       ctx.fillStyle = `rgba(255,236,170,${j.ambushFlash})`
       for (let i = 0; i < 6; i++) {
-        const fx = VIEW.W * 0.55 + Math.sin(i * 2.1 + t * 9) * 70
-        const fy = valleyY - 12 + Math.cos(i * 1.7 + t * 7) * 8
-        ctx.beginPath(); ctx.arc(fx, fy, 2 + j.ambushFlash * 3, 0, Math.PI * 2); ctx.fill()
+        const fx = VIEW.W * 0.55 + Math.sin(i * 2.1 + t * 9) * 80
+        const fy = valleyY - 16 + Math.cos(i * 1.7 + t * 7) * 10
+        ctx.beginPath(); ctx.arc(fx, fy, 2 + j.ambushFlash * 4, 0, Math.PI * 2); ctx.fill()
       }
     }
+    // 標示「敵軍三國」——浮在谷中聯軍上方(跟以色列人區隔)
+    this._banner(VIEW.W * 0.55, valleyY - 60, '⚔️ 敵軍:摩押・亞捫・西珥', '#a83232')
 
     // 詩班(白袍,前排)+ 約沙法(帶冠領唱)+ 後方軍隊,依 advance 走向望樓;讚美時舉手、出音符、放光波
     const marchX = lerp(VIEW.W * 0.1, VIEW.W * 0.78, j.advance)
@@ -982,29 +997,49 @@ export class Renderer {
         ctx.beginPath(); ctx.arc(marchX + 10, choirY - 16, 20 + ph * 120, -0.7, 0.7); ctx.stroke()
       }
     }
-    const singer = (x, lead) => {
-      const bob = praising ? Math.sin(t * 6 + x) * 2.5 : 0
-      ctx.fillStyle = lead ? '#f3e6c0' : '#f6f3ec'
-      ctx.fillRect(x - 4, choirY - 20 + bob, 8, 20)
-      ctx.fillStyle = '#e8bb8d'; ctx.beginPath(); ctx.arc(x, choirY - 24 + bob, 4.2, 0, Math.PI * 2); ctx.fill()
-      if (lead) { ctx.fillStyle = '#e8b53a'; ctx.fillRect(x - 4.5, choirY - 30 + bob, 9, 3) }
-      if (praising) {
-        ctx.strokeStyle = lead ? '#f3e6c0' : '#f6f3ec'; ctx.lineWidth = 3; ctx.lineCap = 'round'
-        ctx.beginPath(); ctx.moveTo(x - 3, choirY - 16 + bob); ctx.lineTo(x - 8, choirY - 26 + bob)
-        ctx.moveTo(x + 3, choirY - 16 + bob); ctx.lineTo(x + 8, choirY - 26 + bob); ctx.stroke()
-        if (Math.sin(t * 4 + x) > 0.6) this._emoji('🎵', x, choirY - 32 + bob, 14)
-      }
+    // —— 以色列人(約沙法的軍隊):放大 + 有表情(讚美→張口歌唱;恐懼→擔憂)——
+    const worried = j.fear > 0.45 && !praising
+    const israelite = (x, kind, s) => {
+      const bob = praising ? Math.sin(t * 6 + x) * 3 * s : 0
+      const cy = choirY + bob
+      const robe = kind === 'soldier' ? '#3a6abf' : kind === 'king' ? '#f4e8c4' : '#f8f5ee'
+      // 袍(梯形)
+      ctx.fillStyle = robe
+      ctx.beginPath(); ctx.moveTo(x - 8 * s, cy); ctx.lineTo(x + 8 * s, cy); ctx.lineTo(x + 5.5 * s, cy - 32 * s); ctx.lineTo(x - 5.5 * s, cy - 32 * s); ctx.closePath(); ctx.fill()
+      if (kind !== 'soldier') { ctx.fillStyle = '#3a6abf'; ctx.fillRect(x - 7 * s, cy - 5 * s, 14 * s, 2.5 * s) } // 藍色衣繸(民15:38 以色列的記號)
+      const hy = cy - 40 * s
+      ctx.fillStyle = '#e8bb8d'; ctx.beginPath(); ctx.arc(x, hy, 7 * s, 0, Math.PI * 2); ctx.fill() // 頭
+      if (kind === 'king') { // 金冠
+        ctx.fillStyle = '#e8b53a'; ctx.beginPath(); ctx.moveTo(x - 8 * s, hy - 4 * s)
+        for (let k = 0; k <= 3; k++) { const px = x - 8 * s + 16 * s * (k / 3); ctx.lineTo(px + 2.6 * s, hy - 12 * s); ctx.lineTo(px + 5.3 * s, hy - 4 * s) }
+        ctx.closePath(); ctx.fill()
+      } else { ctx.fillStyle = kind === 'soldier' ? '#7a5a34' : '#caa05a'; ctx.beginPath(); ctx.arc(x, hy - 1 * s, 7 * s, Math.PI, 0); ctx.fill() } // 頭巾
+      // 臉
+      ctx.fillStyle = '#3a2c22'
+      ctx.beginPath(); ctx.arc(x - 2.6 * s, hy - 0.5 * s, 1.1 * s, 0, Math.PI * 2); ctx.arc(x + 2.6 * s, hy - 0.5 * s, 1.1 * s, 0, Math.PI * 2); ctx.fill()
+      if (praising) { // 張口歌唱
+        ctx.fillStyle = '#7a3b30'; ctx.beginPath(); ctx.ellipse(x, hy + 3.6 * s, 1.8 * s, 2.6 * s, 0, 0, Math.PI * 2); ctx.fill()
+      } else if (worried) { // 擔憂:嘴角下彎 + 八字憂眉
+        ctx.strokeStyle = '#7a3b30'; ctx.lineWidth = 1.3 * s; ctx.lineCap = 'round'
+        ctx.beginPath(); ctx.arc(x, hy + 6 * s, 2.2 * s, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke()
+        ctx.beginPath(); ctx.moveTo(x - 4 * s, hy - 3.6 * s); ctx.lineTo(x - 1.4 * s, hy - 2.4 * s); ctx.moveTo(x + 4 * s, hy - 3.6 * s); ctx.lineTo(x + 1.4 * s, hy - 2.4 * s); ctx.stroke()
+      } else { ctx.strokeStyle = '#7a3b30'; ctx.lineWidth = 1.3 * s; ctx.beginPath(); ctx.moveTo(x - 2 * s, hy + 3.6 * s); ctx.lineTo(x + 2 * s, hy + 3.6 * s); ctx.stroke() }
+      // 手臂(讚美高舉/否則垂下)
+      ctx.strokeStyle = robe; ctx.lineWidth = 4 * s; ctx.lineCap = 'round'; ctx.beginPath()
+      if (praising) { ctx.moveTo(x - 6 * s, cy - 24 * s); ctx.lineTo(x - 12 * s, cy - 38 * s); ctx.moveTo(x + 6 * s, cy - 24 * s); ctx.lineTo(x + 12 * s, cy - 38 * s) }
+      else { ctx.moveTo(x - 6 * s, cy - 24 * s); ctx.lineTo(x - 9 * s, cy - 10 * s); ctx.moveTo(x + 6 * s, cy - 24 * s); ctx.lineTo(x + 9 * s, cy - 10 * s) }
+      ctx.stroke()
+      if (praising && Math.sin(t * 4 + x) > 0.45) this._emoji('🎵', x + 12 * s, cy - 42 * s, 16 * s)
     }
-    singer(marchX, true)
-    singer(marchX - 18, false)
-    singer(marchX - 34, false)
-    ctx.fillStyle = '#3a5a8c'
-    for (let i = 0; i < 5; i++) {
-      const x = marchX - 58 - i * 11
-      const bob = Math.sin(t * 5 + i) * 1.5
-      ctx.fillRect(x - 2, choirY - 15 + bob, 5, 15)
-      ctx.beginPath(); ctx.arc(x, choirY - 18 + bob, 3, 0, Math.PI * 2); ctx.fill()
-    }
+    for (let i = 0; i < 5; i++) israelite(marchX - 74 - i * 16, 'soldier', 1.05) // 後排藍袍軍隊
+    israelite(marchX - 50, 'choir', 1.3) // 詩班
+    israelite(marchX - 26, 'choir', 1.35)
+    israelite(marchX, 'king', 1.7) // 約沙法王(領唱)
+    // 標示「以色列」——浮在隊伍上方,和谷中敵軍區隔
+    this._banner(marchX - 22, choirY - 96, '🛡️ 以色列・約沙法的軍隊', '#2f6fc0')
+
+    // 失去一條命的紅閃
+    if (j.lifeFlash > 0.05) { ctx.fillStyle = `rgba(200,60,40,${j.lifeFlash * 0.22})`; ctx.fillRect(0, 0, VIEW.W, VIEW.H) }
 
     this._jehoshaphatHud(game, j)
   }
@@ -1021,6 +1056,9 @@ export class Renderer {
     ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; ctx.fillText(hud.start, bx, by - 3)
     ctx.textAlign = 'right'; ctx.fillText(hud.goal, bx + barW, by - 3)
 
+    // 命:左上角 3 顆心(失去變空心)——「會輸」的提示
+    for (let i = 0; i < 3; i++) this._emoji(i < (j.lives ?? 3) ? '❤️' : '🤍', 34 + i * 34, 40, 26, 'middle')
+
     by = 70
     this._statBar(bx, by, barW, barH, j.praise, j.praise >= JEHOSHAPHAT.advanceThreshold ? '#2f9e44' : '#d6533b', '🎵 讚美值')
     ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(bx + barW * JEHOSHAPHAT.advanceThreshold - 1, by - 2, 2, barH + 4)
@@ -1029,7 +1067,12 @@ export class Renderer {
     by = 138
     this._statBar(bx, by, barW, barH, j.fear, '#c0392b', '😨 恐懼')
 
-    if (j.calm > 0.35) {
+    if (j.lifeFlash > 0.05) {
+      ctx.fillStyle = `rgba(200,60,40,${0.6 + 0.3 * Math.abs(Math.sin(j.time * 9))})`
+      ctx.font = '800 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+      ctx.fillText('💔 詩班一度動搖!重整旗鼓,繼續讚美', VIEW.W / 2, VIEW.H * 0.46)
+    } else if (j.calm > 0.35) {
       ctx.fillStyle = `rgba(214,83,59,${0.5 + 0.4 * Math.abs(Math.sin(j.time * 6))})`
       ctx.font = '800 26px "Noto Sans TC","Microsoft JhengHei",sans-serif'
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
@@ -1052,9 +1095,10 @@ export class Renderer {
     const b = game.balaam
     const t = b.time
     const lerp = (a, c, k) => a + (c - a) * k
-    const horizonY = GROUND_Y - 40
-    const bandTop = horizonY + 16
-    const bandBot = VIEW.H - 30
+    // 路面加寬 ×2:道路帶由原本 ~90px 拉高到 ~180px(純視覺;碰撞在正規化空間,難度不變)
+    const bandBot = VIEW.H - 18
+    const bandTop = bandBot - 180
+    const horizonY = bandTop - 18
     const yOf = (ny) => lerp(bandTop, bandBot, ny)
 
     // 天空
@@ -1065,15 +1109,44 @@ export class Renderer {
     ctx.fillStyle = '#b8a06a'; ctx.beginPath(); ctx.moveTo(0, horizonY)
     for (let x = 0; x <= VIEW.W; x += 34) { const y = horizonY - 24 - Math.sin(x * 0.01) * 20; ctx.lineTo(x, y) }
     ctx.lineTo(VIEW.W, horizonY); ctx.closePath(); ctx.fill()
-    // 路(葡萄園窄路:上下兩道矮牆)
-    ctx.fillStyle = '#cdb483'; ctx.fillRect(0, bandTop, VIEW.W, bandBot - bandTop)
-    const scroll = (b.progress * 2200 + t * 130) % 60
-    ctx.fillStyle = '#9c855a'; ctx.fillRect(0, bandTop - 8, VIEW.W, 8); ctx.fillRect(0, bandBot, VIEW.W, 8)
-    ctx.fillStyle = 'rgba(120,100,64,0.5)'
-    for (let x = -60 - scroll; x < VIEW.W; x += 60) { ctx.fillRect(x, bandTop - 8, 28, 8); ctx.fillRect(x + 30, bandBot, 28, 8) }
-    // 中線虛線(前進感)
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 3; ctx.setLineDash([18, 22]); ctx.lineDashOffset = scroll
-    ctx.beginPath(); ctx.moveTo(0, (bandTop + bandBot) / 2); ctx.lineTo(VIEW.W, (bandTop + bandBot) / 2); ctx.stroke(); ctx.setLineDash([])
+    // 路兩旁的田野(葡萄園草地),讓道路落在田中而不是浮在天空
+    const field = ctx.createLinearGradient(0, horizonY, 0, VIEW.H)
+    field.addColorStop(0, '#9ba86a'); field.addColorStop(1, '#7f8f54')
+    ctx.fillStyle = field; ctx.fillRect(0, horizonY, VIEW.W, VIEW.H - horizonY)
+
+    const scroll = b.progress * 2200 + t * 130
+    const roadH = bandBot - bandTop
+    // 一般石頭 / 泥巴路(不是高速公路——拿掉白色分隔虛線):泥土底 + 深淺斑塊 + 散落石子
+    const road = ctx.createLinearGradient(0, bandTop, 0, bandBot)
+    road.addColorStop(0, '#bda579'); road.addColorStop(0.5, '#cbb184'); road.addColorStop(1, '#a98c5d')
+    ctx.fillStyle = road; ctx.fillRect(0, bandTop, VIEW.W, roadH)
+    // 濕泥 / 車轍深色斑塊(往左捲動,帶前進感)
+    const Pm = VIEW.W + 200
+    ctx.fillStyle = 'rgba(110,88,52,0.30)'
+    for (let i = 0; i < 22; i++) {
+      const sx = ((i * 96 - scroll * 0.6) % Pm + Pm) % Pm - 100
+      const py = bandTop + 14 + ((i * 57) % (roadH - 28))
+      ctx.beginPath(); ctx.ellipse(sx, py, 30, 10, 0, 0, Math.PI * 2); ctx.fill()
+    }
+    // 散落石子(碎石路:灰褐 + 一點高光)
+    const Ps = VIEW.W + 120
+    for (let i = 0; i < 54; i++) {
+      const sx = ((i * 41 - scroll) % Ps + Ps) % Ps - 60
+      const py = bandTop + 8 + ((i * 73) % (roadH - 16))
+      const r = 3 + (i % 3) * 1.7
+      ctx.fillStyle = i % 2 ? '#8d8270' : '#a79c88'
+      ctx.beginPath(); ctx.ellipse(sx, py, r, r * 0.7, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = 'rgba(255,255,255,0.20)'
+      ctx.beginPath(); ctx.ellipse(sx - r * 0.3, py - r * 0.3, r * 0.4, r * 0.28, 0, 0, Math.PI * 2); ctx.fill()
+    }
+    // 兩旁葡萄園的矮石牆(民 22:24「這邊有牆,那邊有牆」)
+    const wall = (wy) => {
+      ctx.fillStyle = '#8a7c63'; ctx.fillRect(0, wy, VIEW.W, 11)
+      ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(0, wy, VIEW.W, 3)
+      ctx.fillStyle = 'rgba(60,50,34,0.45)'
+      for (let x = -((scroll * 0.5) % 28); x < VIEW.W; x += 28) ctx.fillRect(x, wy, 2, 11)
+    }
+    wall(bandTop - 11); wall(bandBot)
 
     // 使者(拔刀)
     for (const a of b.angels) this._angel(a.x * VIEW.W, yOf(a.y), t)
@@ -1094,8 +1167,14 @@ export class Renderer {
     ctx.beginPath(); ctx.ellipse(-12, -30, 8, 16, -0.4, 0, Math.PI * 2); ctx.ellipse(12, -30, 8, 16, 0.4, 0, Math.PI * 2); ctx.fill()
     ctx.fillStyle = '#f4f1e6'
     ctx.beginPath(); ctx.moveTo(-10, -40); ctx.lineTo(10, -40); ctx.lineTo(8, -2); ctx.lineTo(-8, -2); ctx.closePath(); ctx.fill()
-    ctx.fillStyle = '#f0d9b8'; ctx.beginPath(); ctx.arc(0, -46, 6, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#e8c34a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -53, 7, 0, Math.PI * 2); ctx.stroke()
+    ctx.fillStyle = '#f0d9b8'; ctx.beginPath(); ctx.arc(0, -46, 7, 0, Math.PI * 2); ctx.fill()
+    // 莊嚴嚴肅的臉(面向走來的驢):雙眼 + 內低外揚的眉 + 抿緊的嘴
+    ctx.fillStyle = '#2c2620'
+    ctx.beginPath(); ctx.arc(-3, -47, 1.3, 0, Math.PI * 2); ctx.arc(2, -47, 1.3, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = '#6a5436'; ctx.lineWidth = 1.5; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(-6, -50.5); ctx.lineTo(-1.5, -48.5); ctx.moveTo(5, -50.5); ctx.lineTo(0.5, -48.5); ctx.stroke()
+    ctx.strokeStyle = '#7a5a44'; ctx.beginPath(); ctx.moveTo(-3, -42.5); ctx.lineTo(2.5, -42.5); ctx.stroke()
+    ctx.strokeStyle = '#e8c34a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, -55, 7, 0, Math.PI * 2); ctx.stroke()
     // 拔出來的刀
     ctx.strokeStyle = '#cfd6df'; ctx.lineWidth = 3; ctx.lineCap = 'round'
     ctx.beginPath(); ctx.moveTo(12, -28); ctx.lineTo(26, -54); ctx.stroke()
@@ -1103,36 +1182,90 @@ export class Renderer {
     ctx.restore()
   }
 
-  // 驢(面向右)+ 騎在上面的巴蘭(停步時舉杖鞭打)
+  // 驢(面向右,長耳/長臉/尾巴/鬃毛——明顯是驢不是豬)+ 騎在背上的巴蘭(會做表情;停步時舉杖鞭打)
   _donkeyRider(x, y, t, balking, tremble) {
     const ctx = this.ctx
     const tr = balking ? Math.sin(t * 30) * tremble * 2 : 0
-    ctx.save(); ctx.translate(x + tr, y)
-    ctx.fillStyle = '#9a9088'
-    ctx.beginPath(); ctx.ellipse(0, -12, 20, 11, 0, 0, Math.PI * 2); ctx.fill()
-    ctx.strokeStyle = '#7d756d'; ctx.lineWidth = 3; ctx.lineCap = 'round'
-    const lg = balking ? 0 : Math.sin(t * 8) * 2
+    ctx.save(); ctx.translate(x + tr, y); ctx.scale(1.3, 1.3)
+    const gait = balking ? 0 : Math.sin(t * 8) * 2.2
+    const GREY = '#9b9189', DARK = '#6f675f'
+
+    // 尾巴(身體左後,末端一撮毛)
+    ctx.strokeStyle = DARK; ctx.lineWidth = 3; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(-18, -12); ctx.quadraticCurveTo(-27, -9 + gait, -25, 1); ctx.stroke()
+    ctx.fillStyle = '#4a433c'; ctx.beginPath(); ctx.ellipse(-25, 3, 3, 5.5, 0.2, 0, Math.PI * 2); ctx.fill()
+
+    // 四條細腿 + 蹄(前後交錯踏步)
+    ctx.strokeStyle = DARK; ctx.lineWidth = 3.4; ctx.lineCap = 'round'
+    const legs = [[-12, gait], [10, -gait], [-3, -gait], [5, gait]]
     ctx.beginPath()
-    ctx.moveTo(-12, -4); ctx.lineTo(-12, 6 + lg); ctx.moveTo(12, -4); ctx.lineTo(12, 6 - lg)
-    ctx.moveTo(-4, -4); ctx.lineTo(-4, 6 - lg); ctx.moveTo(8, -4); ctx.lineTo(8, 6 + lg); ctx.stroke()
-    // 頭(朝右)
-    ctx.fillStyle = '#9a9088'; ctx.beginPath(); ctx.ellipse(20, -17, 8, 6, 0.3, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#8a827a'; ctx.fillRect(24, -20, 9, 6)
-    ctx.beginPath(); ctx.moveTo(15, -25); ctx.lineTo(13, -35); ctx.lineTo(18, -26); ctx.closePath(); ctx.fill() // 耳
-    ctx.fillStyle = '#2a2420'; ctx.beginPath(); ctx.arc(22, -18, 1.6, 0, Math.PI * 2); ctx.fill() // 眼(看得見)
-    // 巴蘭(紫袍 + 頭巾,坐在驢背)
-    ctx.save(); ctx.translate(-2, -22)
-    ctx.fillStyle = '#7a5a9c'
-    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.lineTo(5, -18); ctx.lineTo(-5, -18); ctx.closePath(); ctx.fill()
-    ctx.fillStyle = '#e8bb8d'; ctx.beginPath(); ctx.arc(0, -22, 5, 0, Math.PI * 2); ctx.fill()
-    ctx.fillStyle = '#caa05a'; ctx.fillRect(-5, -26, 10, 3)
-    ctx.strokeStyle = '#7a5a9c'; ctx.lineWidth = 3; ctx.lineCap = 'round'
-    ctx.beginPath(); ctx.moveTo(4, -14)
-    if (balking) { ctx.lineTo(16, -28) } else { ctx.lineTo(12, -10) }
+    for (const [lx, off] of legs) { ctx.moveTo(lx, -2); ctx.lineTo(lx, 9 + off) }
     ctx.stroke()
-    if (balking) { ctx.strokeStyle = '#6f4720'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(16, -28); ctx.lineTo(27, -23); ctx.stroke() } // 杖
-    ctx.restore()
-    ctx.restore()
+    ctx.fillStyle = '#3a332c'
+    for (const [lx, off] of legs) ctx.fillRect(lx - 2, 8 + off, 4, 3)
+
+    // 身體(瘦長橢圓 + 淺色肚腹 + 背脊深線)
+    ctx.fillStyle = GREY; ctx.beginPath(); ctx.ellipse(-3, -10, 18, 10, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#b8afa4'; ctx.beginPath(); ctx.ellipse(-3, -6, 14, 5, 0, 0, Math.PI * 2); ctx.fill()
+    ctx.strokeStyle = 'rgba(70,62,52,0.5)'; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(-15, -17); ctx.lineTo(13, -16); ctx.stroke()
+
+    // 脖子 + 短鬃毛
+    ctx.fillStyle = GREY
+    ctx.beginPath(); ctx.moveTo(10, -16); ctx.lineTo(22, -29); ctx.lineTo(29, -25); ctx.lineTo(19, -9); ctx.closePath(); ctx.fill()
+    ctx.strokeStyle = '#5f574e'; ctx.lineWidth = 2
+    for (let i = 0; i <= 4; i++) { const k = i / 4; const mx = 12 + 10 * k, my = -16 - 12 * k; ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(mx - 3, my - 4); ctx.stroke() }
+
+    // 頭(朝右下,長臉)+ 長耳 ×2 + 淺色口鼻 + 睜大的眼(劇情:只有驢看見使者)
+    ctx.save(); ctx.translate(27, -26); ctx.rotate(0.5)
+    const ear = (ex, rot) => {
+      ctx.save(); ctx.translate(ex, -3); ctx.rotate(rot)
+      ctx.fillStyle = GREY; ctx.beginPath(); ctx.ellipse(0, -12, 4.5, 13, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = '#c7a9a9'; ctx.beginPath(); ctx.ellipse(0, -12, 2, 9, 0, 0, Math.PI * 2); ctx.fill()
+      ctx.restore()
+    }
+    ear(-8, -0.28); ear(-3, 0.12) // 兩隻長耳(驢的招牌)
+    ctx.fillStyle = GREY; ctx.beginPath(); ctx.ellipse(0, 0, 13, 7, 0, 0, Math.PI * 2); ctx.fill() // 長臉
+    ctx.fillStyle = '#d7cfc2'; ctx.beginPath(); ctx.ellipse(11, 2, 6, 5, 0, 0, Math.PI * 2); ctx.fill() // 淺色口鼻
+    ctx.fillStyle = '#4a433c'; ctx.beginPath(); ctx.ellipse(14, 1, 1.5, 2.1, 0, 0, Math.PI * 2); ctx.fill() // 鼻孔
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -2, 2.8, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = '#2a2420'; ctx.beginPath(); ctx.arc(0.6, -2, 1.6, 0, Math.PI * 2); ctx.fill() // 睜大的眼
+    if (balking) { // 受驚:斜眉 + 汗珠
+      ctx.strokeStyle = '#3a332c'; ctx.lineWidth = 1.4; ctx.lineCap = 'round'
+      ctx.beginPath(); ctx.moveTo(-4, -6); ctx.lineTo(1, -4.5); ctx.stroke()
+      ctx.fillStyle = 'rgba(120,205,225,0.9)'; ctx.beginPath(); ctx.ellipse(-7, -1, 1.6, 2.4, 0, 0, Math.PI * 2); ctx.fill()
+    }
+    ctx.restore() // 頭
+
+    // ---- 巴蘭(坐在驢背,紫袍 + 頭巾 + 鬍子,會做表情)----
+    ctx.save(); ctx.translate(-3, -22)
+    ctx.fillStyle = '#7a5a9c' // 袍
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.lineTo(5, -17); ctx.lineTo(-5, -17); ctx.closePath(); ctx.fill()
+    ctx.fillStyle = '#e8bb8d'; ctx.beginPath(); ctx.arc(0, -22, 6, 0, Math.PI * 2); ctx.fill() // 頭
+    ctx.fillStyle = '#caa05a'; ctx.fillRect(-6, -27, 12, 3) // 頭巾
+    ctx.fillStyle = '#cfcabf'; ctx.beginPath(); ctx.moveTo(-4, -19); ctx.lineTo(4, -19); ctx.lineTo(0, -13); ctx.closePath(); ctx.fill() // 鬍子
+    // 表情:停步時又惱又急地鞭打(怒)、前進時看不見使者(平靜往前)
+    ctx.fillStyle = '#2c2620'
+    if (balking) {
+      ctx.beginPath(); ctx.arc(-2.4, -23, 1.2, 0, Math.PI * 2); ctx.arc(2.4, -23, 1.2, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = '#6a3a2a'; ctx.lineWidth = 1.3; ctx.lineCap = 'round' // 怒眉(內低)
+      ctx.beginPath(); ctx.moveTo(-5, -26); ctx.lineTo(-1, -24.5); ctx.moveTo(5, -26); ctx.lineTo(1, -24.5); ctx.stroke()
+      ctx.fillStyle = '#5a2420'; ctx.beginPath(); ctx.ellipse(0, -19.3, 2, 1.6, 0, 0, Math.PI * 2); ctx.fill() // 張口喝斥
+    } else {
+      ctx.beginPath(); ctx.arc(-2.2, -23, 1.1, 0, Math.PI * 2); ctx.arc(2.6, -23, 1.1, 0, Math.PI * 2); ctx.fill()
+      ctx.strokeStyle = '#7a5a44'; ctx.lineWidth = 1.2; ctx.lineCap = 'round' // 平眉
+      ctx.beginPath(); ctx.moveTo(-5, -25); ctx.lineTo(-1, -25); ctx.moveTo(1, -25); ctx.lineTo(5, -25); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(-2, -19.3); ctx.lineTo(2, -19.3); ctx.stroke() // 平嘴
+    }
+    // 手臂 / 杖(停步時高舉鞭打)
+    ctx.strokeStyle = '#7a5a9c'; ctx.lineWidth = 3; ctx.lineCap = 'round'
+    ctx.beginPath(); ctx.moveTo(4, -13)
+    if (balking) { ctx.lineTo(15, -27) } else { ctx.lineTo(12, -9) }
+    ctx.stroke()
+    if (balking) { ctx.strokeStyle = '#6f4720'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(15, -27); ctx.lineTo(27, -22); ctx.stroke() } // 杖
+    ctx.restore() // 巴蘭
+
+    ctx.restore() // 驢整體
   }
 
   // 反轉奇兵 HUD:前進(出發→眼開)+ 時間 + 停步提示 + 操作提示。
@@ -1149,6 +1282,8 @@ export class Renderer {
     by = 58
     const tleft = Math.max(0, 1 - b.time / BALAAM.duration)
     this._statBar(bx, by, barW, 10, tleft, tleft < 0.25 ? '#d6533b' : '#caa83a', '⏳ 時間')
+    // 命:左上角 3 顆心(被使者擋住、巴蘭鞭打驢 = 扣一條;民 22「你三次打我」)
+    for (let i = 0; i < 3; i++) this._emoji(i < (b.lives ?? 3) ? '❤️' : '🤍', 34 + i * 34, 40, 26, 'middle')
     if (b.balking) {
       ctx.fillStyle = `rgba(214,83,59,${0.55 + 0.35 * Math.abs(Math.sin(b.time * 7))})`
       ctx.font = '800 24px "Noto Sans TC","Microsoft JhengHei",sans-serif'

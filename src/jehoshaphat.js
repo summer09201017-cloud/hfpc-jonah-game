@@ -31,6 +31,8 @@ export class Jehoshaphat {
     this.ambushFlash = 0 // 敵營自亂的火花閃光 0..1
     this.flashTimer = 1.4
     this.calm = 0 // 「不要爭戰只管站穩」提示的顯示強度(平滑)
+    this.lives = 3 // 3 條命:恐懼一旦滿(詩班一度動搖)扣 1,扣完 = 真的潰散(失敗)
+    this.lifeFlash = 0 // 失去一條命的紅閃 0..1
     this.phase = 'march'
     this.done = false
   }
@@ -86,6 +88,7 @@ export class Jehoshaphat {
     // ---- 「不要爭戰,只管站穩」提示:讚美不足時亮起(平滑) ----
     const wantCalm = singing ? 0 : 1
     this.calm += (wantCalm - this.calm) * Math.min(1, dt * 4)
+    this.lifeFlash = Math.max(0, this.lifeFlash - dt * 2)
 
     // ---- 敵營自亂的火花(ambush 越滿越頻繁、越亮)----
     this.ambushFlash = Math.max(0, this.ambushFlash - dt * 2.2)
@@ -98,8 +101,19 @@ export class Jehoshaphat {
 
     // ---- 結束判定 ----
     if (this.fear >= 1) {
-      this.done = true
-      this.game.gameOver()
+      // 恐懼滿:詩班一度動搖,扣一條命。扣完才真的潰散(失敗)——不讚美就會一條條失去 = 真的會輸。
+      this.lives -= 1
+      this.lifeFlash = 1
+      Audio.sfx('hit')
+      if (this.lives <= 0) {
+        this.done = true
+        this.game.gameOver()
+      } else {
+        // 重整旗鼓:恐懼回半、讚美回起始,給孩子再試的機會(但敵軍自亂略退,別太好賺)
+        this.fear = 0.45
+        this.praise = JEHOSHAPHAT.startPraise
+        this.ambush = Math.max(0, this.ambush - 0.15)
+      }
     } else if (this.ambush >= 1) {
       this.done = true
       this.game.win()

@@ -24,7 +24,8 @@ export class Balaam {
     this.balking = false // 此刻是否被使者擋住(停步)
     this.bumpFlash = 0 // 撞擊閃光 / 鞭打 0..1
     this.bumpCool = 0
-    this.bumps = 0 // 被鞭打次數(劇情味,不致命)
+    this.bumps = 0 // 被鞭打次數(劇情味)
+    this.lives = 3 // 3 條命:每被使者擋住、巴蘭鞭打驢一次扣 1(民 22「你三次打我」);扣完 = 闖了禍(失敗)
     this.donkeyTremble = 0
     this.done = false
   }
@@ -73,7 +74,13 @@ export class Balaam {
           this.bumpCool = C.bumpCooldown
           this.bumps++
           this.bumpFlash = 1
+          this.lives -= 1 // 扣一條命:閃避失敗 = 巴蘭又打了驢一下
           Audio.sfx('hit') // 巴蘭鞭打驢的悶響
+          if (this.lives <= 0) {
+            this.done = true
+            this.game.gameOver() // 三次都不聽攔阻 → 闖了禍(失敗)
+            return
+          }
         }
       }
     }
