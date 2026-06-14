@@ -282,9 +282,13 @@ export class Game {
       // 標題/失敗畫面:按跳鍵也能開始/重玩(過關畫面不處理,等按鈕)
       this.input.consumePress() // 清掉覆蓋畫面期間的點擊,避免一開始就誤觸
       this.input.consumeTap()
-      if (this.input.consumeJump()) {
-        if (this.state === STATE.TITLE) this.start('run')
-        else if (this.state === STATE.LOSE) this.restartCurrent()
+      const jumped = this.input.consumeJump()
+      if (this.state === STATE.TITLE) {
+        if (jumped) this.start('run')
+      } else if (this.state === STATE.LOSE) {
+        // 失敗後給 ~0.8 秒緩衝:反轉/聖歌奇兵都是「按住方向鍵」在玩,一輸時那顆按住的 ↑
+        // 會立刻被當成「重玩」把失敗畫面跳過,玩家根本看不到「要再玩一次嗎?」。緩衝後才接受重玩。
+        if (jumped && this._loseAt && t - this._loseAt > 800) this.restartCurrent()
       }
     }
 
@@ -600,6 +604,7 @@ export class Game {
 
   gameOver() {
     this.state = STATE.LOSE
+    this._loseAt = typeof performance !== 'undefined' ? performance.now() : 0 // 失敗緩衝起點(見 loop)
     this.ui.hidePauseButton()
     Audio.stopMusic()
     Audio.sfx('lose')

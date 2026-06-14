@@ -177,7 +177,8 @@ export class UI {
     this.show(`
       <div class="kicker lose">${L.lose.head}</div>
       <p class="body" style="text-align:center">${L.lose.body}</p>
-      <button class="btn" data-act="restart">↻ 再試一次</button>
+      <p class="body" style="text-align:center;font-weight:800;margin-top:0.4em">要再玩一次嗎？</p>
+      <button class="btn" data-act="restart">🔁 再玩一次</button>
     `)
   }
 
