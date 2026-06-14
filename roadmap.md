@@ -25,8 +25,10 @@
   - ✅ **#1 摩西舉手之戰**(出 17)可玩:`?level=moses`、`src/moses.js`(重用 storm 平衡引擎)、
     level===7、config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作已依牧師實測簡化
     (按住=舉手、亞倫戶珥自動扶手)、日落 20 秒、加表情/兩軍標籤。
-  - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config `REDSEA` + scripture `REDSEA` 已就緒,
-    場景 `redsea.js`(level===8)與 `_drawRedSea` 待寫(~半天,步驟見 HANDOFF)。
+  - ✅ **#2 紅海奔逃**(出 14)完成:`?level=redsea`、`src/redsea.js`(level===8,phase stand→cross→closing,
+    重用跑酷跳躍手感)、config/scripture `REDSEA`、renderer `_drawRedSea`(兩道水牆+乾海床+礁石+法老戰車追兵+海合攏)。
+    已加入嵌入白名單(8),供保羅「出埃及之旅 · 過紅海」站嵌入。驗證:`_redsea-tune.mjs`(三道設計閘門)、
+    `_redsea-render-check.mjs`(headless 渲染+規則 361 幀 0 錯)、`npm run test:offline` 156 項全綠。
   - ⚠ 戰爭關**別 push 約拿 main**(會自動部署曝光原型);永久家是「驗證後搬進保羅 repo」。
 
 ---

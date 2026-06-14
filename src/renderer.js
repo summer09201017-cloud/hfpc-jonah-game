@@ -1,4 +1,4 @@
-import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD, MOSES, JEHOSHAPHAT, BALAAM } from './config.js'
+import { VIEW, GROUND_Y, PLAYER, RUN, STORM, FARE, FISH, PREACH, GOURD, MOSES, REDSEA, JEHOSHAPHAT, BALAAM } from './config.js'
 
 // 所有畫面繪製集中在這裡。背景用 Canvas 圖形畫,角色/物件用 emoji 當圖示
 // (零美術檔即可運行,日後可換成真圖)。採邏輯解析度 960×540,等比縮放置中。
@@ -56,6 +56,11 @@ export class Renderer {
     // 戰爭闖關原型「摩西舉手」(出 17)也是另一個畫面
     if (game.level === 7) {
       this._drawMoses(game)
+      return
+    }
+    // 戰爭闖關原型「紅海奔逃」(出 14)也是另一個畫面
+    if (game.level === 8) {
+      this._drawRedSea(game)
       return
     }
     // 戰爭闖關原型「聖歌奇兵 · 約沙法」(代下 20)也是另一個畫面
@@ -691,6 +696,227 @@ export class Renderer {
 
     // ---- HUD:兩條狀態條 + 可用度 + 太陽計時提示 ----
     this._mosesHud(game, m, prog)
+  }
+
+  // 戰爭闖關「紅海奔逃」(出 14:13–28):兩道水牆立在左右(以橫向側視=上下兩道),
+  // 中間是分開的乾海床;站住等候→海分開→過海床(跳礁石、法老追兵在後)→海合攏淹追兵。
+  _drawRedSea(game) {
+    const ctx = this.ctx
+    const r = game.redsea
+    const t = r.time
+    const W = VIEW.W, H = VIEW.H
+    const lerp = (a, b, k) => a + (b - a) * k
+    const open = r.seaOpen() // 0=海未開 .. 1=全開
+    const closing = r.phase === 'closing'
+
+    // ── 破曉天空(戲劇性的暗藍 → 暖光地平)──
+    const sky = ctx.createLinearGradient(0, 0, 0, H)
+    sky.addColorStop(0, '#16243f')
+    sky.addColorStop(0.6, '#27496c')
+    sky.addColorStop(1, '#7d8fa6')
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, W, H)
+
+    // 兩道水牆的內緣(open 越大、走廊越寬;closing 時 open→0、牆合攏)
+    const skyTop = 54
+    const topWallBot = lerp(GROUND_Y - 18, skyTop + 30, open) // 上水牆的下緣
+    const botWallTop = lerp(GROUND_Y + 26, H - 22, open) // 下水牆的上緣
+
+    // ── 乾海床走廊(走廊內:上半霧氣、下半濕沙;摩西向海伸杖,海中出現乾地)──
+    const corr = ctx.createLinearGradient(0, topWallBot, 0, botWallTop)
+    corr.addColorStop(0, '#bfe0ea') // 走廊深處的水霧光
+    corr.addColorStop(0.55, '#d9c69a') // 漸到濕沙
+    corr.addColorStop(1, '#b9a06e')
+    ctx.fillStyle = corr
+    ctx.fillRect(0, topWallBot, W, Math.max(0, botWallTop - topWallBot))
+
+    // 海床濕沙(玩家腳下):沙紋 + 捲動的礁石/陷坑
+    if (botWallTop > GROUND_Y) {
+      ctx.fillStyle = '#c2a874'
+      ctx.fillRect(0, GROUND_Y, W, botWallTop - GROUND_Y)
+      ctx.strokeStyle = 'rgba(120,92,52,0.35)'
+      ctx.lineWidth = 2
+      for (let k = 0; k < 3; k++) {
+        const yy = GROUND_Y + 10 + k * 14
+        ctx.beginPath()
+        for (let x = 0; x <= W; x += 18) {
+          const off = Math.sin(x * 0.05 + r.dist * 0.01 + k) * 2
+          if (x === 0) ctx.moveTo(x, yy + off)
+          else ctx.lineTo(x, yy + off)
+        }
+        ctx.stroke()
+      }
+    }
+
+    // 礁石(只在過海床階段畫;依世界距離換算螢幕 x)
+    if (r.phase === 'cross' || closing) {
+      for (const h of r.hazards) {
+        const sx = PLAYER.x + (h.x - r.dist)
+        if (sx < -40 || sx > W + 40) continue
+        this._emoji('🪨', sx, GROUND_Y + 6, 34)
+      }
+    }
+
+    // ── 一道水牆的繪製(fromTop=true 從上垂下、波在下緣;false 從下升起、波在上緣)──
+    const drawWall = (edgeY, fromTop) => {
+      const grad = fromTop
+        ? ctx.createLinearGradient(0, skyTop, 0, edgeY)
+        : ctx.createLinearGradient(0, edgeY, 0, H)
+      grad.addColorStop(0, fromTop ? '#0c3458' : '#1f6f9e')
+      grad.addColorStop(1, fromTop ? '#1f6f9e' : '#0c3458')
+      const wave = (x) => Math.sin(x * 0.025 + t * 3 * (fromTop ? 1 : -1)) * 9 + Math.sin(x * 0.06 - t * 2) * 4
+      ctx.fillStyle = grad
+      ctx.beginPath()
+      ctx.moveTo(0, fromTop ? skyTop : H)
+      ctx.lineTo(W, fromTop ? skyTop : H)
+      for (let x = W; x >= 0; x -= 14) ctx.lineTo(x, edgeY + wave(x))
+      ctx.closePath()
+      ctx.fill()
+      // 牆面垂直水流條紋
+      ctx.strokeStyle = 'rgba(255,255,255,0.09)'
+      ctx.lineWidth = 2
+      for (let i = 0; i < W; i += 44) {
+        const sx = i + ((t * 26) % 44)
+        ctx.beginPath()
+        ctx.moveTo(sx, fromTop ? skyTop : edgeY)
+        ctx.lineTo(sx, fromTop ? edgeY : H)
+        ctx.stroke()
+      }
+      // 浪邊白沫
+      ctx.strokeStyle = 'rgba(228,244,252,0.75)'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      for (let x = 0; x <= W; x += 14) {
+        const y = edgeY + wave(x)
+        if (x === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      ctx.stroke()
+    }
+    drawWall(topWallBot, true) // 上水牆
+    drawWall(botWallTop, false) // 下水牆
+
+    // ── 法老的追兵(戰車,在玩家身後左側;lead 越小越逼近、越大)──
+    if (r.phase === 'cross' || r.phase === 'stand') {
+      const near = 1 - Math.max(0, Math.min(1, r.lead / REDSEA.chaseGapMax)) // 0=遠 .. 1=逼近
+      const baseX = PLAYER.x - 80 - lerp(230, 30, near)
+      for (let i = 0; i < 3; i++) {
+        const cx = baseX - i * 46
+        if (cx < -50) continue
+        this._chariot(cx, GROUND_Y + 4, t + i, 0.92 + near * 0.16)
+      }
+      // 「法老追兵」旗標(在最前一輛上方)
+      if (baseX > -10) this._banner(baseX, GROUND_Y - 92, '法老追兵', '#8a2f2f')
+    }
+
+    // ── 以色列人(向先知奔跑;closing 時已奔到對岸右側)──
+    const p = game.player
+    const runnerX = closing ? lerp(PLAYER.x, W - 130, Math.min(1, r.closeT / REDSEA.closeTime)) : PLAYER.x
+    const moving = r.phase === 'cross'
+    this._prophet(runnerX, p.y, moving ? r.dist * 0.05 : 0, !p.onGround, false)
+    this._banner(runnerX, p.y - 96, '以色列', '#3a5a8c')
+
+    // ── closing:海牆合攏的大水花,淹沒追兵 ──
+    if (closing) {
+      const k = Math.min(1, r.closeT / REDSEA.closeTime)
+      ctx.fillStyle = `rgba(225,244,252,${0.5 * (1 - Math.abs(k - 0.5) * 2)})`
+      for (let i = 0; i < 40; i++) {
+        const fx = (i * 53 + t * 120) % W
+        const fy = lerp(topWallBot, botWallTop, (i % 7) / 7) + Math.sin(i + t * 6) * 14
+        ctx.beginPath()
+        ctx.arc(fx, fy, 3 + (i % 3) * 2, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    // ── HUD + 階段提示 ──
+    this._redseaHud(game, r)
+  }
+
+  // 單輛戰車(法老追兵):馬 emoji + 車身 + 兩輪 + 兵與長矛。s=縮放。
+  _chariot(x, footY, t, s) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.translate(x, footY)
+    ctx.scale(s, s)
+    // 馬(emoji,面向右)
+    this._emoji('🐎', 16, 6, 40)
+    // 車身
+    ctx.fillStyle = '#5a3a22'
+    roundRect(ctx, -22, -26, 30, 18, 4)
+    ctx.fill()
+    // 兩輪(轉動)
+    ctx.strokeStyle = '#3a2614'
+    ctx.lineWidth = 3
+    for (const wx of [-16, -2]) {
+      ctx.beginPath()
+      ctx.arc(wx, -6, 9, 0, Math.PI * 2)
+      ctx.stroke()
+      const a = t * 6
+      ctx.beginPath()
+      ctx.moveTo(wx + Math.cos(a) * 9, -6 + Math.sin(a) * 9)
+      ctx.lineTo(wx - Math.cos(a) * 9, -6 - Math.sin(a) * 9)
+      ctx.moveTo(wx + Math.cos(a + 1.57) * 9, -6 + Math.sin(a + 1.57) * 9)
+      ctx.lineTo(wx - Math.cos(a + 1.57) * 9, -6 - Math.sin(a + 1.57) * 9)
+      ctx.stroke()
+    }
+    // 兵(紅袍火柴人)+ 長矛
+    ctx.fillStyle = '#9c3b3b'
+    ctx.fillRect(-12, -46, 6, 22)
+    ctx.beginPath()
+    ctx.arc(-9, -50, 5, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = '#caa83a'
+    ctx.lineWidth = 2.5
+    ctx.beginPath()
+    ctx.moveTo(-4, -52)
+    ctx.lineTo(14, -64)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  // 紅海關的 HUD:過海進度條(走 hudLabels)+ 與追兵距離條 + 階段提示語。
+  _redseaHud(game, r) {
+    const ctx = this.ctx
+    const barW = 300, barH = 16, bx = (VIEW.W - barW) / 2
+
+    // 過海進度(此岸→對岸),走 hudLabels(嵌入契約,不寫死)
+    const hud = game.hudLabels || { start: '此岸', goal: '對岸 🌊' }
+    const prog = Math.min(1, r.dist / REDSEA.goalDistance)
+    let by = 30
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'; roundRect(ctx, bx, by, barW, barH, 8); ctx.fill()
+    ctx.fillStyle = '#2f9ec4'; roundRect(ctx, bx, by, barW * prog, barH, 8); ctx.fill()
+    ctx.fillStyle = '#0f3a52'; ctx.font = '600 15px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+    ctx.textBaseline = 'bottom'; ctx.textAlign = 'left'; ctx.fillText(hud.start, bx, by - 3)
+    ctx.textAlign = 'right'; ctx.fillText(hud.goal, bx + barW, by - 3)
+
+    // 與追兵的距離(越短越危險,轉紅)
+    by = 70
+    const leadFrac = Math.max(0, Math.min(1, r.lead / REDSEA.chaseGapMax))
+    this._statBar(bx, by, barW, barH, leadFrac, leadFrac < 0.3 ? '#d6533b' : '#caa83a', '🐎 與追兵的距離')
+
+    // 階段提示語(置中大字)
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'
+    const say = (text, sub, color) => {
+      ctx.font = '700 30px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+      const w = ctx.measureText(text).width + 44
+      ctx.fillStyle = 'rgba(8,18,30,0.55)'
+      roundRect(ctx, VIEW.W / 2 - w / 2, 118, w, sub ? 78 : 50, 12); ctx.fill()
+      ctx.fillStyle = color || '#fff'
+      ctx.fillText(text, VIEW.W / 2, 144)
+      if (sub) {
+        ctx.font = '600 17px "Noto Sans TC","Microsoft JhengHei",sans-serif'
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'
+        ctx.fillText(sub, VIEW.W / 2, 174)
+      }
+    }
+    if (r.phase === 'stand') {
+      if (r.canGo()) say('海開了！點擊舉杖，衝過海床 →', '趁海分開、海牆倒下前跑到對岸', '#ffe08a')
+      else if (r.tooEarly > 0) say('不要懼怕，只管站住！', '等耶和華分開紅海（出 14:13）', '#ffd0d0')
+      else say('站住，等候耶和華的救恩', '出 14:13–14', '#cfe8ff')
+    } else if (r.phase === 'closing') {
+      say('水合攏了，淹沒了法老的全軍！', '出 14:28', '#cfe8ff')
+    }
   }
 
   // 山頂上的扶手者(亞倫 / 戶珥):站立的簡化人形;supporting 時舉起內側手去扶摩西的手,並亮起光暈。

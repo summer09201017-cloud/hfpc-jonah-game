@@ -13,7 +13,7 @@ game.boot()
 //   (正常六關本來就是點標題「開始」才進關,所以一向正常;這裡是補上捷徑缺的那個手勢。)
 try {
   const lv = new URLSearchParams(location.search).get('level')
-  const starter = { moses: 'startMoses', jehoshaphat: 'startJehoshaphat', balaam: 'startBalaam' }[lv]
+  const starter = { moses: 'startMoses', redsea: 'startRedSea', jehoshaphat: 'startJehoshaphat', balaam: 'startBalaam' }[lv]
   if (starter && typeof game[starter] === 'function') {
     if (game.ui && game.ui.hide) game.ui.hide() // 蓋掉預設的第一關標題
     const gate = document.createElement('div')
