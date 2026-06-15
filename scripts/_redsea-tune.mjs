@@ -50,7 +50,10 @@ function playOne(behavior) {
       dist += C.runSpeed * mult * DT
       if (stumble > 0) stumble = Math.max(0, stumble - DT)
       lead = Math.min(C.chaseGapMax, lead + C.gapRecoverPerSec * DT)
-      while (nextHazardAt < dist + 1400) { hazards.push({ x: nextHazardAt, resolved: false }); nextHazardAt += C.hazardGap }
+      while (nextHazardAt < dist + 1400) { hazards.push({ x: nextHazardAt, resolved: false, vx: C.crabDart || 0 }); nextHazardAt += C.hazardGap }
+      // 最壞情況:把「每個」障礙都當成會快速左衝的螃蟹(vx=crabDart)→ 反應時間最短;
+      //   若反應式玩家在此仍 200/200 勝,則任何「礁石+動物」隨機混合都更好過(公平保證)。
+      for (const h of hazards) { if (!h.resolved && h.vx) h.x -= h.vx * DT }
       for (const h of hazards) {
         if (h.resolved) continue
         const screenX = PLAYER.x + (h.x - dist)
