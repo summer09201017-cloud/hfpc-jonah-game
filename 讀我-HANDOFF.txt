@@ -20,7 +20,8 @@ GitHub 帳號：summer09201017-cloud。GitHub 是唯一真相；桌面 zip 只�
   • 聖歌敵人「放大+眉毛嘴巴」改動已在 **feat/redsea**（已 push）；war-games 站要 `npm run build` → netlify CLI 手動重部署才生效。
   • 但「戰爭關永久家＝paul」：聖歌已搬進 paul（?demo=jehoshaphat-action）、大廳已改指向 paul，
     所以**聖歌新版敵人其實已隨 paul 自動上線**；war-games 只是舊原型站。巴蘭/摩西可比照搬進 paul。
-  • 新跨專案 skill：embed-fullscreen-fit（手機全螢幕嵌入固定比例 Canvas 關）。
+  • 新跨專案 skill ×2：embed-fullscreen-fit（手機全螢幕嵌入固定比例 Canvas 關）、
+    difficulty-knob（難度旋鈕 輕鬆/普通/挑戰 + ⭐星等，資料驅動、不會把「不會失敗」的關變成會輸）。
 
   鐵律：走 PR 不直推 main；大廳連 paul ?demo= 要「先部署 paul 再併大廳」否則 404；
         卡片關一律 L6 手繪、動作關遊玩時隱藏標題；零美術檔改完用 Playwright 手機橫向截圖驗收。
