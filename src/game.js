@@ -6,6 +6,8 @@ import { Input } from './input.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6 } from './scripture.js'
+import { initSpeech, speakScripture, stopSpeech } from './speak.js'
+const LEVELS = { 1: LEVEL1, 2: LEVEL2, 3: LEVEL3, 4: LEVEL4, 5: LEVEL5, 6: LEVEL6 }
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
 const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach', GOURD: 'gourd' }
@@ -53,6 +55,7 @@ export class Game {
   }
 
   boot() {
+    initSpeech()
     this.input.attach(this.canvas)
     this.renderer.resize()
     this._onResize = () => this.renderer.resize()
@@ -461,6 +464,7 @@ export class Game {
   }
 
   win() {
+    speakScripture(LEVELS[this.level]?.verse)
     this.state = STATE.WIN
     this.ui.hidePauseButton()
     Audio.stopMusic()
@@ -511,6 +515,7 @@ export class Game {
 
   // 嵌入：React 卸載時呼叫——停迴圈、移除監聽、停音樂，避免殘留 rAF/監聽。
   destroy() {
+    stopSpeech()
     this.stopped = true
     if (this._onResize) window.removeEventListener('resize', this._onResize)
     if (this.input && this.input.detach) this.input.detach()
@@ -759,6 +764,7 @@ export class Game {
   }
 
   _fishWin() {
+    speakScripture(LEVEL3.verse)
     this.fish.lit = this.fish.total // 全亮
     this.fish.phase = 'done'
     this.state = STATE.WIN
@@ -866,6 +872,7 @@ export class Game {
   }
 
   _preachWin() {
+    speakScripture(LEVEL5.verse)
     this.preach.repented = this.preach.total // 全城悔改
     this.preach.phase = 'done'
     this.state = STATE.WIN
@@ -963,6 +970,7 @@ export class Game {
   }
 
   _gourdWin() {
+    speakScripture(LEVEL6.verse)
     this.gourd.done = this.gourd.total
     this.gourd.phase = 'done'
     this.state = STATE.WIN
