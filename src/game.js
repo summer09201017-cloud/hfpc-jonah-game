@@ -498,6 +498,7 @@ export class Game {
 
   gameOver() {
     this.state = STATE.LOSE
+    speakScripture(LEVELS[this.level]?.verse)   // 失敗也朗讀經文(不是只有過關)
     this.ui.hidePauseButton()
     Audio.stopMusic()
     Audio.sfx('lose')
