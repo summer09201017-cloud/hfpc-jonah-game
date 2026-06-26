@@ -6,7 +6,8 @@ import { Input } from './input.js'
 import { Audio } from './audio.js'
 import { Storm } from './storm.js'
 import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6 } from './scripture.js'
-import { initSpeech, speakScripture, stopSpeech } from './speak.js'
+import { initSpeech, speakScripture, speakText, stopSpeech } from './speak.js'
+import { getAge, getAgePref, HOWTO } from './age.js'
 const LEVELS = { 1: LEVEL1, 2: LEVEL2, 3: LEVEL3, 4: LEVEL4, 5: LEVEL5, 6: LEVEL6 }
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
@@ -51,7 +52,19 @@ export class Game {
     this.acc = 0
     this.stopped = false // 嵌入卸載時設 true，停止 requestAnimationFrame 迴圈
     this._done = false // 嵌入結束回呼只觸發一次
+    this._refreshAge() // 年齡分級全局係數(幼/童/青);_resetRun 的生命會用到,要先設好
     this._resetRun()
+  }
+
+  // 年齡分級:從 localStorage 讀目前年齡檔(標題選單選的);每關開始時重讀,讓選擇即時生效。
+  // 全局係數(speedMul/livesDelta/stormMul/speakHowto)由 src/age.js 定義——回應兒主老師「太簡單/不識字幼兒不會玩」。
+  _refreshAge() {
+    this.age = getAge(getAgePref())
+  }
+
+  // 幼稚園檔:用語音念出這一關「怎麼玩」(給不識字的孩子);沒中文語音→靜默。
+  _howto() {
+    if (this.age && this.age.speakHowto && HOWTO[this.level]) speakText(HOWTO[this.level])
   }
 
   boot() {
@@ -94,8 +107,9 @@ export class Game {
   }
 
   _resetRun() {
+    this._refreshAge() // 每次重置都重讀年齡(標題選的即時生效);跑酷/上岸關走這裡
     this.player.reset()
-    this.player.lives = LIVES
+    this.player.lives = Math.max(1, LIVES + this.age.livesDelta) // 年齡:幼+2、青-1
     this.spawner.reset()
     this.distance = 0
     this.speed = RUN.startSpeed
@@ -146,6 +160,7 @@ export class Game {
     this.ui.showPauseButton()
     Audio.unlock() // 在使用者手勢(按開始)中解鎖音訊
     Audio.startMusic()
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 第四關 上岸→尼尼微:重用第一關跑酷引擎,換主題(曠野→尼尼微大城)、無船價門檻。
@@ -165,17 +180,20 @@ export class Game {
     this.ui.showPauseButton()
     Audio.unlock()
     Audio.startMusic()
+    this._howto() // 幼稚園:語音念玩法
   }
 
   startStorm() {
     this._enterImmersive()
     this.level = 2
+    this._refreshAge()
     this.storm.reset()
     this.ui.hide()
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock() // 解鎖音訊(雷聲);暴風雨不放輕快旋律
     Audio.stopMusic()
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 重玩目前這一關(失敗/暫停→重新開始 用)
@@ -281,7 +299,7 @@ export class Game {
       // 闖關:點畫面任意處(非暫停區)= 跳;世界自動向前並加速;按住不放=衝刺
       if (press) wantJump = true
       const k = Math.min(1, this.distance / RUN.rampDistance)
-      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * speedMult
+      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * speedMult * this.age.speedMul
     } else {
       // 漫步,或「闖關到船邊船價不足、暫時自由移動回頭收集」
       // 漫步:按住 →/畫面右半 = 前進,←/畫面左半 = 後退,輕點 = 跳;無時間壓力
@@ -295,8 +313,8 @@ export class Game {
           this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
         const backward =
           this.input.left || (this.input.pointerDown && this.input.pointerX < half)
-        // 衝刺只加快前進(後退不加速)
-        this.speed = forward ? WALK.speed * boostMult : backward ? -WALK.speed : 0
+        // 衝刺只加快前進(後退不加速);前進速度再乘年齡係數
+        this.speed = forward ? WALK.speed * boostMult * this.age.speedMul : backward ? -WALK.speed : 0
       }
     }
 
@@ -673,6 +691,7 @@ export class Game {
   startFish() {
     this._enterImmersive()
     this.level = 3
+    this._refreshAge()
     this.fish = {
       stations: LEVEL3.stations,
       idx: 0,
@@ -688,6 +707,7 @@ export class Game {
     Audio.unlock()
     Audio.stopMusic() // 魚腹安靜,不放輕快旋律
     this.ui.showFishIntro(LEVEL3)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 開始往前走一小段(走到下一盞禱告之光);收起卡片,進 PLAYING 讓 step 跑
@@ -715,8 +735,8 @@ export class Game {
     if (wantJump && p.jump()) Audio.sfx('jump')
     // 前進:站著走快、蹲著鑽慢
     let speed = 0
-    if (p.crouching) speed = FISH.crouchSpeed
-    else if (walkHeld) speed = FISH.walkSpeed
+    if (p.crouching) speed = FISH.crouchSpeed * this.age.speedMul
+    else if (walkHeld) speed = FISH.walkSpeed * this.age.speedMul
     f.moving = speed > 0
     if (speed > 0) {
       let nd = f.dist + speed * dt
@@ -795,6 +815,7 @@ export class Game {
   startPreach() {
     this._enterImmersive()
     this.level = 5
+    this._refreshAge()
     this.preach = {
       stations: LEVEL5.stations,
       idx: 0,
@@ -810,6 +831,7 @@ export class Game {
     Audio.unlock()
     Audio.startMusic() // 大城街道有市井氣,保留輕快旋律
     this.ui.showPreachIntro(LEVEL5)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 開始往前走(走到下一位居民面前);收起卡片,進 PLAYING 讓 step 跑
@@ -833,7 +855,7 @@ export class Game {
     const half = this.input.viewW * 0.5
     const walkHeld = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
     if (wantJump && p.jump()) Audio.sfx('jump')
-    const speed = walkHeld ? PREACH.walkSpeed : 0
+    const speed = walkHeld ? PREACH.walkSpeed * this.age.speedMul : 0
     f.moving = speed > 0
     if (speed > 0) f.dist = Math.min(PREACH.segment, f.dist + speed * dt)
     p.update(dt)
@@ -904,6 +926,7 @@ export class Game {
   startGourd() {
     this._enterImmersive()
     this.level = 6
+    this._refreshAge()
     this.gourd = {
       stations: LEVEL6.stations,
       idx: 0,
@@ -918,6 +941,7 @@ export class Game {
     Audio.unlock()
     Audio.stopMusic() // 城外安靜的黃昏與清晨,不放輕快旋律
     this.ui.showGourdIntro(LEVEL6)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 播這一幕的場景動畫;收起卡片,進 PLAYING 讓 step 跑

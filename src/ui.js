@@ -1,4 +1,5 @@
 // 標題 / 過關 / 失敗的覆蓋畫面,用 DOM 呈現(文字、經文、按鈕排版較容易)。
+import { AGE, getAgePref, setAgePref } from './age.js'
 
 export class UI {
   constructor() {
@@ -24,7 +25,8 @@ export class UI {
       const ds = e.target && e.target.dataset ? e.target.dataset : null
       if (!ds) return
       const act = ds.act
-      if (act === 'start' && this._start) this._start(ds.mode || 'run')
+      if (act === 'age') { setAgePref(ds.age); if (this._lastTitleL) this.showTitle(this._lastTitleL) } // 年齡選單:寫偏好 + 重繪高亮(遊戲各關開始時自己讀)
+      else if (act === 'start' && this._start) this._start(ds.mode || 'run')
       else if (act === 'storm' && this._storm) this._storm()
       else if (act === 'nineveh' && this._nineveh) this._nineveh()
       else if (act === 'restart' && this._restart) this._restart()
@@ -126,11 +128,22 @@ export class UI {
   }
 
   showTitle(L) {
+    this._lastTitleL = L // 年齡選單重繪用
+    const cur = getAgePref()
+    const ageRow = Object.values(AGE)
+      .map((a) => {
+        const on = cur === a.id
+        const style = on ? 'outline:3px solid #ffd98a;background:#e4572e;color:#fff' : ''
+        return `<button class="btn ghost" data-act="age" data-age="${a.id}" title="${a.sub}" style="${style}">${a.emoji} ${a.label}</button>`
+      })
+      .join('')
     this.show(`
       <div class="kicker">約拿闖關 · MVP</div>
       <h1>${L.title}</h1>
       <p class="sub">${L.subtitle}</p>
       <div class="verse"><span class="ref">${L.ref}</span>${L.verse}</div>
+      <div class="row" style="gap:6px">${ageRow}</div>
+      <p class="hint" style="margin:2px 0 6px">👶 先選年齡:幼稚園(慢一點、多一條命、會語音講解) / 兒童 / 青少年(更快更難)</p>
       <div class="row">
         <button class="btn" data-act="start" data-mode="run">🏃 闖關模式</button>
         <button class="btn ghost" data-act="start" data-mode="walk">🚶 漫步模式</button>
