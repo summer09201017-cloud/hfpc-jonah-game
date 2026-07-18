@@ -148,6 +148,7 @@ export class Game {
   }
 
   start(mode) {
+    window.psPing?.('jonah-start'); this._psT0 = Date.now()
     this._enterImmersive()
     this.level = 1
     this.mode = mode === 'walk' ? 'walk' : 'run'
@@ -482,6 +483,7 @@ export class Game {
   }
 
   win() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
     speakScripture(LEVELS[this.level]?.verse, { ref: LEVELS[this.level]?.ref })
     this.state = STATE.WIN
     this.ui.hidePauseButton()
