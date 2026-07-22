@@ -787,6 +787,7 @@ export class Game {
   }
 
   _fishWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
     speakScripture(LEVEL3.verse, { ref: LEVEL3.ref })
     this.fish.lit = this.fish.total // 全亮
     this.fish.phase = 'done'
@@ -897,6 +898,7 @@ export class Game {
   }
 
   _preachWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
     speakScripture(LEVEL5.verse, { ref: LEVEL5.ref })
     this.preach.repented = this.preach.total // 全城悔改
     this.preach.phase = 'done'
@@ -997,6 +999,7 @@ export class Game {
   }
 
   _gourdWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
     speakScripture(LEVEL6.verse, { ref: LEVEL6.ref })
     this.gourd.done = this.gourd.total
     this.gourd.phase = 'done'
