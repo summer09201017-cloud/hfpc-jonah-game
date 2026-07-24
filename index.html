@@ -49,6 +49,10 @@
         var psLast = parseInt(localStorage.getItem(psK) || '0', 10);
         if (Date.now() - psLast > 600000) { localStorage.setItem(psK, String(Date.now())); window.psPing('jonah'); }
       } catch (_) { window.psPing('jonah'); }
+      var _dwT0=Date.now(),_dwSent=false;
+      function _dwLeave(){ if(_dwSent)return; _dwSent=true; var sec=Math.round((Date.now()-_dwT0)/1000); if(sec>=3&&sec<=1800) window.psPing('jonah-dwell',sec); }
+      addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden')_dwLeave(); });
+      addEventListener('pagehide',_dwLeave);
     </script>
   </body>
 </html>
