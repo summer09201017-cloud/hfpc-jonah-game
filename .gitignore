@@ -6,3 +6,6 @@ site
 
 # Claude Code 本機個人設定(各機器自有的權限 allowlist,不該共用)
 .claude/settings.local.json
+
+# Netlify 本機連結狀態(內含本機絕對路徑,每台機不同)
+.netlify/
