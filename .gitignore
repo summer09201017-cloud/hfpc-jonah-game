@@ -9,3 +9,6 @@ site
 
 # Netlify 本機連結狀態(內含本機絕對路徑,每台機不同)
 .netlify/
+
+# 本機備份檔(0813:曾被誤 commit,移出版控)
+*.local-bak-*
