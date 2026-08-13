@@ -12,3 +12,7 @@ site
 
 # 本機備份檔(0813:曾被誤 commit,移出版控)
 *.local-bak-*
+
+# 部署工具的本機產物(0813:wrangler deploy 產生,不進版控)
+.wrangler
+.wrangler/**
