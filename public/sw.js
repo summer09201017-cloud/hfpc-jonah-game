@@ -3,7 +3,7 @@
 // 順手更新快取;離線時才退回快取。這樣改版不會被舊快取黏住。
 // 改版時把 CACHE 版本號 +1,舊快取會在啟用時自動清除。
 
-const CACHE = 'jonah-v19'
+const CACHE = 'jonah-v20'
 // 預快取「整個 app shell」(HTML + CSS + 全部 ES 模組 + 圖示),
 // 這樣「安裝後馬上離線」(教室沒網路)也能玩,不必先線上完整跑一輪。
 // 仍是 network-first(下方 fetch):線上一律拿最新並更新快取,離線才退回這份預快取。
@@ -88,3 +88,8 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(req))
   )
 })
+
+// 🏷️ 版號回報(0820 全艦隊批次):頁尾徽章問「實際執行中的版本」,答案=本 SW 的快取名。
+self.addEventListener('message', function (e) {
+  if (e && e.data === 'GET_VERSION' && e.source) e.source.postMessage({ type: 'SW_VERSION', v: CACHE });
+});
