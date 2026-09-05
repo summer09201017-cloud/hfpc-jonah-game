@@ -25,8 +25,10 @@
   - ✅ **#1 摩西舉手之戰**(出 17)可玩:`?level=moses`、`src/moses.js`(重用 storm 平衡引擎)、
     level===7、config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作已依牧師實測簡化
     (按住=舉手、亞倫戶珥自動扶手)、日落 20 秒、加表情/兩軍標籤。
-  - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config `REDSEA` + scripture `REDSEA` 已就緒,
-    場景 `redsea.js`(level===8)與 `_drawRedSea` 待寫(~半天,步驟見 HANDOFF)。
+  - ✅ **#2 紅海奔逃**(出 14)完成:`?level=redsea`、`src/redsea.js`(level===8,phase stand→cross→closing,
+    重用跑酷跳躍手感)、config/scripture `REDSEA`、renderer `_drawRedSea`(兩道水牆+乾海床+礁石+法老戰車追兵+海合攏)。
+    已加入嵌入白名單(8),供保羅「出埃及之旅 · 過紅海」站嵌入。驗證:`_redsea-tune.mjs`(三道設計閘門)、
+    `_redsea-render-check.mjs`(headless 渲染+規則 361 幀 0 錯)、`npm run test:offline` 156 項全綠。
   - ⚠ 戰爭關**別 push 約拿 main**(會自動部署曝光原型);永久家是「驗證後搬進保羅 repo」。
 
 ---
@@ -86,13 +88,14 @@
 
 ---
 
+## 🆕 2026-06-12 進度
+
+- ~~牧師實測回饋批次(2026-06-11)~~ **✅ 全部完成並上線**:暴風雨視覺(大船/向量水手/烏雲大雨)、更短更易、「拋約拿入海」結尾(+`stormCast` 開關,保羅海路站不拋)、曠野稀疏聚落+蛇蠍、⚡ 衝刺寶物+按住衝刺、回頭補船價修死局。
+- **`feat/quiz-ch3-4` 分支(待牧者審核)**:題庫 22→36 題補全約拿書 3–4 章(每題標 `ch` 章節;3:4 之後與第 4 章標 `spoiler` 防爆雷);**重開第四關漫步長者 NPC**(L4 出 1–3 章非爆雷題、L1 行為不變、嵌入模式一律不出);標題新增「🚶 第四關 · 漫步問答」入口。`npm test` 103 項 / `test:offline` 142 項全綠。**⚠ 新題為 AI 草擬,請牧者依審核清單過目後再 merge(main 自動部署)。**
+
 ## 🔜 真正待做(依優先)
 
-0. **🆕 牧師實測回饋(2026-06-11,優先處理)**:
-   - **第二關 暴風雨 視覺**:船畫大一點、船上多幾位水手、外面要有暴風大雨、天空烏雲密布(`renderer._drawStorm`)。
-   - **第二關 節奏與結局**:時間再短一點、再容易一點(`config.STORM`);**結尾加「把約拿拋進海裡」橋段才算過關**(拿 1:15——撐過風暴後出現提示/動畫:水手將約拿拋下海、海就平靜,然後過關;嵌入模式同樣流程後再 `_finish(true)`)。
-   - 第四關 曠野:房子太多(曠野感不足,`_bgNineveh` 的 `_buildings` 改稀疏)、加蛇/蠍敵人——**`feat/runner-tuning` 進行中**。
-   - 跑酷:加「跑更快」機制(⚡ 衝刺寶物,`BOOST`)——**進行中**;船價不足回頭收集時寶物已被吃光、無幣可撿——**修補中(`needFare` 回頭補生成)**。
+0. **牧者審核 `feat/quiz-ch3-4`**(見上)→ 滿意才 merge main。
 1. **真實手機離線實測**:`npm run test:offline` 已自動驗證「build 可離線執行 + sw 預快取齊備」(目前全綠);但仍建議**裝一台手機 → 關 Wi-Fi/行動網路 → 確認六關都能玩**(自動檢查證明「能離線載入」,不證明每關手感都對)。
 2. **實機微調**:第二關難度(`STORM`)、第三關手感(`FISH.*`)、第四關長度(`NINEVEH.goalDistance`)、第五關步調(`PREACH.*`)、第六關每幕節奏(`GOURD.sceneTime`)。
 3. (可選)用**真實美術**(PNG sprite sheet,**不要 GIF**)替換 emoji/向量。

@@ -3,6 +3,7 @@
 [build]
   command = "npm run build"
   publish = "site"
+  ignore = "exit 0"   # 0905 止血(skill netlify-autobuild-stop):Git 觸發的雲端 build 一律取消;正版在 CF Workers
 
 # .webmanifest 要用正確 MIME,PWA 安裝才穩(Netlify 預設會給 octet-stream)
 [[headers]]

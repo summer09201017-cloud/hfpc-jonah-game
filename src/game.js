@@ -8,7 +8,12 @@ import { Storm } from './storm.js'
 import { Moses } from './moses.js'
 import { Jehoshaphat } from './jehoshaphat.js'
 import { Balaam } from './balaam.js'
-import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES, JEHOSHAPHAT, BALAAM } from './scripture.js'
+import { RedSea } from './redsea.js'
+import { LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5, LEVEL6, MOSES, JEHOSHAPHAT, BALAAM, REDSEA } from './scripture.js'
+import { initSpeech, speakScripture, speakText, stopSpeech } from './speak.js'
+import { getAge, getAgePref, HOWTO } from './age.js'
+// 關卡 → 經文(過關 / 失敗朗讀用)。7~10 是戰爭闖關原型(level 編號見 constructor 的註解)。
+const LEVELS = { 1: LEVEL1, 2: LEVEL2, 3: LEVEL3, 4: LEVEL4, 5: LEVEL5, 6: LEVEL6, 7: MOSES, 8: REDSEA, 9: JEHOSHAPHAT, 10: BALAAM }
 import { QUESTIONS, pickQuestions, quizRemark } from './quiz.js'
 
 const STATE = { TITLE: 'title', PLAYING: 'playing', PAUSED: 'paused', WIN: 'win', LOSE: 'lose', QUIZ: 'quiz', FISH: 'fish', PREACH: 'preach', GOURD: 'gourd' }
@@ -34,8 +39,8 @@ export class Game {
     this.onComplete = opts.onComplete || null
     // 嵌入支援全六關。注意：3/5/6 的卡片流程走 ui.showFish*/showPreach*/showGourd*——
     // 宿主(保羅)嵌入這幾關時，注入的 ui 必須實作這些卡片方法(EmbedUI)，純 NullUI 會卡在 intro。
-    // 嵌入白名單:1–6 約拿六關;7=摩西舉手(出17);9=聖歌奇兵(代下20);10=反轉奇兵(民22)——皆純 Canvas,NullUI 即可
-    this.embedLevel = [1, 2, 3, 4, 5, 6, 7, 9, 10].includes(opts.level) ? opts.level : 1
+    // 嵌入白名單:1–6 約拿六關;7=摩西舉手(出17);8=紅海奔逃(出14);9=聖歌奇兵(代下20);10=反轉奇兵(民22)——皆純 Canvas,NullUI 即可
+    this.embedLevel = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(opts.level) ? opts.level : 1
     this.embedMode = opts.mode === 'walk' ? 'walk' : 'run'
     this._hudOverride = opts.hudLabels || null // 外層(保羅)注入的進度條地名；沒注入時各關用自己的預設(LEVELx.hud)
     this.hudLabels = this._hudOverride || { ...LEVEL1.hud }
@@ -45,6 +50,7 @@ export class Game {
     this.moses = new Moses(this) // 戰爭闖關原型(出 17);level === 7
     this.jehoshaphat = new Jehoshaphat(this) // 戰爭闖關原型(代下 20);level === 9
     this.balaam = new Balaam(this) // 戰爭闖關原型(民 22);level === 10
+    this.redsea = new RedSea(this) // 戰爭闖關原型(出 14);level === 8
     this.state = STATE.TITLE
     this.level = 1 // 1=約帕港口(跑酷) / 2=暴風雨(平衡) / 3=大魚肚(默想) / 4=上岸→尼尼微(跑酷)
     this.mode = 'run' // 'run'=闖關(自動跑) / 'walk'=漫步(自由走、無壓力)
@@ -56,10 +62,23 @@ export class Game {
     this.acc = 0
     this.stopped = false // 嵌入卸載時設 true，停止 requestAnimationFrame 迴圈
     this._done = false // 嵌入結束回呼只觸發一次
+    this._refreshAge() // 年齡分級全局係數(幼/童/青);_resetRun 的生命會用到,要先設好
     this._resetRun()
   }
 
+  // 年齡分級:從 localStorage 讀目前年齡檔(標題選單選的);每關開始時重讀,讓選擇即時生效。
+  // 全局係數(speedMul/livesDelta/stormMul/speakHowto)由 src/age.js 定義——回應兒主老師「太簡單/不識字幼兒不會玩」。
+  _refreshAge() {
+    this.age = getAge(getAgePref())
+  }
+
+  // 幼稚園檔:用語音念出這一關「怎麼玩」(給不識字的孩子);沒中文語音→靜默。
+  _howto() {
+    if (this.age && this.age.speakHowto && HOWTO[this.level]) speakText(HOWTO[this.level])
+  }
+
   boot() {
+    initSpeech()
     this.input.attach(this.canvas)
     this.renderer.resize()
     this._onResize = () => this.renderer.resize()
@@ -75,6 +94,7 @@ export class Game {
       else if (this.embedLevel === 5) this.startPreach()
       else if (this.embedLevel === 6) this.startGourd()
       else if (this.embedLevel === 7) this.startMoses()
+      else if (this.embedLevel === 8) this.startRedSea()
       else if (this.embedLevel === 9) this.startJehoshaphat()
       else if (this.embedLevel === 10) this.startBalaam()
       else this.start(this.embedMode)
@@ -101,8 +121,9 @@ export class Game {
   }
 
   _resetRun() {
+    this._refreshAge() // 每次重置都重讀年齡(標題選的即時生效);跑酷/上岸關走這裡
     this.player.reset()
-    this.player.lives = LIVES
+    this.player.lives = Math.max(1, LIVES + this.age.livesDelta) // 年齡:幼+2、青-1
     this.spawner.reset()
     this.distance = 0
     this.speed = RUN.startSpeed
@@ -141,6 +162,7 @@ export class Game {
   }
 
   start(mode) {
+    window.psPing?.('jonah-start'); this._psT0 = Date.now()
     this._enterImmersive()
     this.level = 1
     this.mode = mode === 'walk' ? 'walk' : 'run'
@@ -153,6 +175,7 @@ export class Game {
     this.ui.showPauseButton()
     Audio.unlock() // 在使用者手勢(按開始)中解鎖音訊
     Audio.startMusic('level')
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 第四關 上岸→尼尼微:重用第一關跑酷引擎,換主題(曠野→尼尼微大城)、無船價門檻。
@@ -172,17 +195,20 @@ export class Game {
     this.ui.showPauseButton()
     Audio.unlock()
     Audio.startMusic('level')
+    this._howto() // 幼稚園:語音念玩法
   }
 
   startStorm() {
     this._enterImmersive()
     this.level = 2
+    this._refreshAge()
     this.storm.reset()
     this.ui.hide()
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock() // 解鎖音訊(雷聲);暴風雨不放輕快旋律
     Audio.stopMusic()
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 戰爭闖關原型「摩西舉手之戰」(出 17:8–13):重用暴風雨的平衡引擎(self-contained Moses 場景)。
@@ -226,13 +252,29 @@ export class Game {
     this.state = STATE.PLAYING
     this.ui.showPauseButton()
     Audio.unlock()
-    Audio.stopMusic()
+    Audio.startMusic('balaam') // 反轉奇兵:中東風行路曲(民 22 騎驢上路)
+  }
+
+  // 戰爭闖關原型「紅海奔逃」(出 14:13–28):自成一格的奔逃場景,重用跑酷的跳躍手感。
+  // 單機由 ?level=redsea 進;嵌入由 opts.level=8 進。站住等候→過海床→海合攏淹追兵=過關,追兵追上=失敗。
+  startRedSea() {
+    this._enterImmersive()
+    this.level = 8
+    this.redsea.reset()
+    // 進度條兩端文字走 hudLabels(嵌入契約):外層有注入用注入的,否則用 REDSEA 預設(此岸→對岸)
+    this.hudLabels = this._hudOverride || { ...REDSEA.hud }
+    this.ui.hide()
+    this.state = STATE.PLAYING
+    this.ui.showPauseButton()
+    Audio.unlock() // 解鎖音訊(分海/海合攏的悶響)
+    Audio.startMusic('redsea') // 紅海:急促追逐曲(出 14 法老追兵在後),營造緊張
   }
 
   // 重玩目前這一關(失敗/暫停→重新開始 用)
   restartCurrent() {
     if (this.level === 10) this.startBalaam()
     else if (this.level === 9) this.startJehoshaphat()
+    else if (this.level === 8) this.startRedSea()
     else if (this.level === 7) this.startMoses()
     else if (this.level === 6) this.startGourd()
     else if (this.level === 5) this.startPreach()
@@ -246,6 +288,7 @@ export class Game {
   next() {
     if (this.level === 10) this.startBalaam() // 戰爭原型:再走一次(不接約拿關鏈)
     else if (this.level === 9) this.startJehoshaphat() // 戰爭原型:再唱一次(不接約拿關鏈)
+    else if (this.level === 8) this.startRedSea() // 戰爭原型:再奔逃一次(不接約拿關鏈)
     else if (this.level === 7) this.startMoses() // 戰爭原型:再玩一次(不接約拿關鏈)
     else if (this.level === 1) this.startStorm()
     else if (this.level === 2) this.startFish()
@@ -308,6 +351,11 @@ export class Game {
       this.moses.step(dt)
       return
     }
+    // 戰爭闖關原型「紅海奔逃」(出 14)自成一格,交給 RedSea 場景處理
+    if (this.level === 8) {
+      this.redsea.step(dt)
+      return
+    }
     // 戰爭闖關原型「聖歌奇兵」(代下 20)自成一格,交給 Jehoshaphat 場景處理
     if (this.level === 9) {
       this.jehoshaphat.step(dt)
@@ -358,7 +406,7 @@ export class Game {
       // 闖關:點畫面任意處(非暫停區)= 跳;世界自動向前並加速;按住不放=衝刺
       if (press) wantJump = true
       const k = Math.min(1, this.distance / RUN.rampDistance)
-      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * speedMult
+      this.speed = (RUN.startSpeed + (RUN.maxSpeed - RUN.startSpeed) * k) * speedMult * this.age.speedMul
     } else {
       // 漫步,或「闖關到船邊船價不足、暫時自由移動回頭收集」
       // 漫步:按住 →/畫面右半 = 前進,←/畫面左半 = 後退,輕點 = 跳;無時間壓力
@@ -372,8 +420,8 @@ export class Game {
           this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
         const backward =
           this.input.left || (this.input.pointerDown && this.input.pointerX < half)
-        // 衝刺只加快前進(後退不加速)
-        this.speed = forward ? WALK.speed * boostMult : backward ? -WALK.speed : 0
+        // 衝刺只加快前進(後退不加速);前進速度再乘年齡係數
+        this.speed = forward ? WALK.speed * boostMult * this.age.speedMul : backward ? -WALK.speed : 0
       }
     }
 
@@ -541,6 +589,8 @@ export class Game {
   }
 
   win() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
+    speakScripture(LEVELS[this.level]?.verse, { ref: LEVELS[this.level]?.ref })
     this.state = STATE.WIN
     this.ui.hidePauseButton()
     Audio.stopMusic()
@@ -576,6 +626,16 @@ export class Game {
       })
       return
     }
+    if (this.level === 8) {
+      // 戰爭闖關原型「紅海奔逃」:過海床到對岸、海合攏淹追兵得勝。原型不接約拿關鏈——「下一關」= 再奔逃一次。
+      this.ui.showWin(REDSEA, null, {
+        showCoins: false,
+        nextLabel: '🔁 再奔逃一次',
+        nextEnabled: true,
+        progress: '戰爭闖關原型 · 紅海奔逃(出 14)',
+      })
+      return
+    }
     if (this.level === 2) {
       // 暴風雨:無寶物分數;下一關 = 大魚肚
       this.ui.showWin(LEVEL2, null, {
@@ -605,6 +665,7 @@ export class Game {
   gameOver() {
     this.state = STATE.LOSE
     this._loseAt = typeof performance !== 'undefined' ? performance.now() : 0 // 失敗緩衝起點(見 loop)
+    speakScripture(LEVELS[this.level]?.verse, { ref: LEVELS[this.level]?.ref })   // 失敗也朗讀經文(不是只有過關)
     this.ui.hidePauseButton()
     Audio.stopMusic()
     Audio.sfx('lose')
@@ -614,13 +675,15 @@ export class Game {
         ? BALAAM
         : this.level === 9
         ? JEHOSHAPHAT
-        : this.level === 7
-          ? MOSES
-          : this.level === 2
-            ? LEVEL2
-            : this.level === 4
-              ? LEVEL4
-              : LEVEL1
+        : this.level === 8
+          ? REDSEA
+          : this.level === 7
+            ? MOSES
+            : this.level === 2
+              ? LEVEL2
+              : this.level === 4
+                ? LEVEL4
+                : LEVEL1
     )
   }
 
@@ -634,6 +697,7 @@ export class Game {
 
   // 嵌入：React 卸載時呼叫——停迴圈、移除監聽、停音樂，避免殘留 rAF/監聽。
   destroy() {
+    stopSpeech()
     this.stopped = true
     if (this._onResize) window.removeEventListener('resize', this._onResize)
     if (this.input && this.input.detach) this.input.detach()
@@ -790,6 +854,7 @@ export class Game {
   startFish() {
     this._enterImmersive()
     this.level = 3
+    this._refreshAge()
     this.fish = {
       stations: LEVEL3.stations,
       idx: 0,
@@ -805,6 +870,7 @@ export class Game {
     Audio.unlock()
     Audio.stopMusic() // 魚腹安靜,不放輕快旋律
     this.ui.showFishIntro(LEVEL3)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 開始往前走一小段(走到下一盞禱告之光);收起卡片,進 PLAYING 讓 step 跑
@@ -832,8 +898,8 @@ export class Game {
     if (wantJump && p.jump()) Audio.sfx('jump')
     // 前進:站著走快、蹲著鑽慢
     let speed = 0
-    if (p.crouching) speed = FISH.crouchSpeed
-    else if (walkHeld) speed = FISH.walkSpeed
+    if (p.crouching) speed = FISH.crouchSpeed * this.age.speedMul
+    else if (walkHeld) speed = FISH.walkSpeed * this.age.speedMul
     f.moving = speed > 0
     if (speed > 0) {
       let nd = f.dist + speed * dt
@@ -882,6 +948,8 @@ export class Game {
   }
 
   _fishWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
+    speakScripture(LEVEL3.verse, { ref: LEVEL3.ref })
     this.fish.lit = this.fish.total // 全亮
     this.fish.phase = 'done'
     this.state = STATE.WIN
@@ -911,6 +979,7 @@ export class Game {
   startPreach() {
     this._enterImmersive()
     this.level = 5
+    this._refreshAge()
     this.preach = {
       stations: LEVEL5.stations,
       idx: 0,
@@ -926,6 +995,7 @@ export class Game {
     Audio.unlock()
     Audio.startMusic() // 大城街道有市井氣,保留輕快旋律
     this.ui.showPreachIntro(LEVEL5)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 開始往前走(走到下一位居民面前);收起卡片,進 PLAYING 讓 step 跑
@@ -949,7 +1019,7 @@ export class Game {
     const half = this.input.viewW * 0.5
     const walkHeld = this.input.right || (this.input.pointerDown && this.input.pointerX >= half)
     if (wantJump && p.jump()) Audio.sfx('jump')
-    const speed = walkHeld ? PREACH.walkSpeed : 0
+    const speed = walkHeld ? PREACH.walkSpeed * this.age.speedMul : 0
     f.moving = speed > 0
     if (speed > 0) f.dist = Math.min(PREACH.segment, f.dist + speed * dt)
     p.update(dt)
@@ -989,6 +1059,8 @@ export class Game {
   }
 
   _preachWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
+    speakScripture(LEVEL5.verse, { ref: LEVEL5.ref })
     this.preach.repented = this.preach.total // 全城悔改
     this.preach.phase = 'done'
     this.state = STATE.WIN
@@ -1019,6 +1091,7 @@ export class Game {
   startGourd() {
     this._enterImmersive()
     this.level = 6
+    this._refreshAge()
     this.gourd = {
       stations: LEVEL6.stations,
       idx: 0,
@@ -1033,6 +1106,7 @@ export class Game {
     Audio.unlock()
     Audio.stopMusic() // 城外安靜的黃昏與清晨,不放輕快旋律
     this.ui.showGourdIntro(LEVEL6)
+    this._howto() // 幼稚園:語音念玩法
   }
 
   // 播這一幕的場景動畫;收起卡片,進 PLAYING 讓 step 跑
@@ -1086,6 +1160,8 @@ export class Game {
   }
 
   _gourdWin() {
+    window.psPing?.('jonah-done', this._psT0 ? Math.round((Date.now() - this._psT0) / 1000) : 0)
+    speakScripture(LEVEL6.verse, { ref: LEVEL6.ref })
     this.gourd.done = this.gourd.total
     this.gourd.phase = 'done'
     this.state = STATE.WIN

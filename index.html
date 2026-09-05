@@ -35,5 +35,174 @@
       <p>請把手機轉成<b>橫向</b>來玩<br /><span>轉成橫向會自動全螢幕</span></p>
     </div>
     <script type="module" src="/src/main.js"></script>
-  </body>
+  <div id="appVerBadge" style="position:fixed;right:6px;bottom:4px;font-size:11px;line-height:1;opacity:.55;z-index:2147483000;pointer-events:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.9);font-family:system-ui,sans-serif"></div>
+    <script>
+      /* 🏷️ appVerBadgeFade（0828）：版號徽章是 position:fixed 在右下角，實測會蓋住大廳卡片、
+         遊戲的「難度 / 開始比賽」按鈕——pointer-events:none 只讓「點擊」穿過去，字還是被蓋著。
+         做法：10 秒後淡出。要看版本就重新整理，平常不擋畫面。 */
+      ;(function () {
+        var b = document.getElementById('appVerBadge')
+        if (!b) return
+        b.style.transition = 'opacity .8s'
+        setTimeout(function () {
+          b.style.opacity = '0'
+          setTimeout(function () { b.style.display = 'none' }, 900)
+        }, 10000)
+      })()
+    </script>
+<script>
+/* 🏷️ 版號徽章(0820 全艦隊批次):問「正在控制本頁的 SW」拿版本=你手上真的在跑的那一版,
+   頁面不寫死任何版號(不會漂)。硬重整(Ctrl+F5)的分頁不受 SW 管、問不到 → 誠實顯示退路
+   (股票管家 v134 同款);SW 換版接管時會再問,自動換新。 */
+(function () {
+  var el = document.getElementById('appVerBadge');
+  if (!el || !('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+  var got = false;
+  navigator.serviceWorker.addEventListener('message', function (e) {
+    if (e.data && e.data.type === 'SW_VERSION') {
+      got = true;
+      var s = String(e.data.v), m = /-((?:v|nf)?\d+)$/.exec(s);
+      el.textContent = '🏷️ 版本 ' + (m ? m[1] : s) + '(這台裝置實際執行中的版本)';
+    }
+  });
+  function ask() { var c = navigator.serviceWorker.controller; if (c) c.postMessage('GET_VERSION'); }
+  navigator.serviceWorker.ready.then(ask).catch(function () {});
+  navigator.serviceWorker.addEventListener('controllerchange', ask);
+  setTimeout(function () {
+    if (got) return;
+    if (!navigator.serviceWorker.controller) el.textContent = '🏷️ 版本 —(強制重新整理的分頁問不到;普通重整一次即顯示)';
+    else { ask(); setTimeout(function () { if (!got) el.textContent = '🏷️ 版本 —(讀不到,重整一次即顯示)'; }, 1500); }
+  }, 1600);
+})();
+</script>
+    <script>
+      // play-stats 三層匿名計數(lobby-play-rank §3/§4):開啟 10 分去重;-start/-done 不去重;-done 帶 t=秒。零個資。
+      window.psPing = function (key, t) {
+        try {
+          // 🔴 0813:原本是白名單 `if (!hostname.endsWith('netlify.app')) return;`——
+          //   本站已遷 CF(hfpc-jonah-game.summer09201017.workers.dev)⇒ **每一次都提早 return**
+          //   ⇒ 三層打點(-start/-done/-dwell)明明全做齊了,卻一筆都沒送出去,零錯誤零紅燈。
+          //   (同型:大廳 07-22 遷 CF 後統計從 15 次/天掉到 1~2 次/天,躺了三週沒人發現。)
+          // ★ 改用艦隊主流的黑名單:只擋本機開發,其餘一律放行 ⇒ 以後搬家不會再斷。
+          if (['localhost', '127.0.0.1'].includes(location.hostname)) return;
+          var u = 'https://hfpc-play-stats.summer09201017.workers.dev/api/ping?g=' + key + (t ? '&t=' + t : '');
+          if (navigator.sendBeacon) navigator.sendBeacon(u); else fetch(u, { mode: 'no-cors' });
+        } catch (_) {}
+      };
+      try {
+        var psK = 'ps-last-jonah';
+        var psLast = parseInt(localStorage.getItem(psK) || '0', 10);
+        if (Date.now() - psLast > 600000) { localStorage.setItem(psK, String(Date.now())); window.psPing('jonah'); }
+      } catch (_) { window.psPing('jonah'); }
+      var _dwT0=Date.now(),_dwSent=false;
+      function _dwLeave(){ if(_dwSent)return; _dwSent=true; var sec=Math.round((Date.now()-_dwT0)/1000); if(sec>=3&&sec<=1800) window.psPing('jonah-dwell',sec); }
+      addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden')_dwLeave(); });
+      addEventListener('pagehide',_dwLeave);
+    </script>
+  
+<script>
+// ← 返回大廳(skill back-to-lobby-button):孩子卡住要能離開。DOM 疊在畫面上,不畫進 canvas。
+// 退出 ≠ 過關:這裡只導頁,絕不呼叫 onComplete。嵌入時先讓宿主處理。
+(function () {
+  var LOBBY = 'https://hfpc-bible-games.summer09201017.workers.dev';
+  function go() {
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen(); } catch (e) {}
+    if (window.parent && window.parent !== window) {          // 嵌入:交給宿主收掉關卡視窗
+      try { window.parent.postMessage({ type: 'hfpc-exit' }, '*'); } catch (e) {}
+      if (history.length > 1) { history.back(); return; }
+    }
+    location.href = LOBBY;
+  }
+  function add() {
+    if (document.querySelector('[data-hfpc-lobby]')) return;
+    var b = document.createElement('button');
+    b.textContent = '← 返回大廳';
+    b.setAttribute('aria-label', '返回大廳');
+    b.setAttribute('data-hfpc-lobby', '1');
+    b.style.cssText = 'position:fixed;z-index:2147483000;' +
+      'top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));' +
+      'min-width:44px;min-height:44px;padding:9px 14px;border:0;border-radius:12px;' +
+      'font:600 15px/1.2 system-ui,"Microsoft JhengHei",sans-serif;' +
+      'background:rgba(0,0,0,.58);color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    b.addEventListener('click', go);
+    (document.body || document.documentElement).appendChild(b);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', add); else add();
+})();
+</script>
+
+
+
+<script>
+// 🎵 背景音樂(BGM 百曲庫 0726,skill procedural-bgm):零音檔 Web Audio。
+// 曲子由站名雜湊決定=全艦隊每站不同首;有關卡的遊戲可呼叫 window.hfpcBgmLevel(n) 換曲。
+// 音域 330Hz+/音量經 AnalyserNode 校正(手機喇叭放不出 500Hz 以下——0726 實測)。
+(function () {
+  var SITE = 'hfpc-jonah-game';
+  var muted = false; try { muted = localStorage.getItem('bgm-muted') === '1'; } catch (e) {}
+  var ctx = null, timer = 0, step = 0, cur = null, started = false;
+  function variant(lv) {
+    var SC = [[523.25,587.33,659.25,783.99,880],[440,523.25,587.33,659.25,783.99],[392,440,493.88,587.33,659.25],[349.23,392,440,523.25,587.33],[587.33,659.25,739.99,880,987.77],[329.63,392,440,493.88,587.33],[466.16,523.25,587.33,698.46,783.99],[415.3,466.16,554.37,622.25,739.99]];
+    var PT = [[0,1,2,3,4,3,2,1],[0,2,4,2,1,3,2,0],[4,3,2,1,0,1,2,3],[0,0,2,2,4,4,2,-1],[0,2,1,3,2,4,3,-1],[4,2,0,2,4,2,1,0],[0,3,1,4,2,0,3,-1],[2,4,2,0,1,3,4,2]];
+    var x = 2166136261, s = SITE + '|' + (lv || 1);
+    for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619) >>> 0 }
+    var mul = [1, 1.122, 0.891][(x >>> 13) % 3];
+    var sc = SC[x % 8].map(function (f) { return f * mul });
+    var p = PT[(x >>> 3) % 8].concat(PT[(x >>> 6) % 8]);
+    var wave = ['triangle', 'square', 'sine'][(x >>> 11) % 3];
+    return { mel: p.map(function (i) { return i < 0 ? 0 : sc[i] }),
+             bass: [0,0,3,3,4,4,3,3,0,0,3,3,4,4,0,0].map(function (i) { return sc[i] / 2 }),
+             wave: wave, vol: wave === 'square' ? 0.2 : wave === 'sine' ? 0.42 : 0.32,
+             ms: [190, 220, 250, 290][(x >>> 9) % 4] };
+  }
+  function blip(f, dur, type, vol) {
+    if (muted || !ctx) return;
+    try {
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + dur + 0.02);
+    } catch (e) {}
+  }
+  function tick() {
+    if (muted || !cur) return;
+    var i = step % 16;
+    if (cur.bass[i]) blip(cur.bass[i], cur.ms / 1000 * 1.8, 'sine', 0.02);
+    if (step % 2 === 0) { var mf = cur.mel[(step / 2) % 16 | 0]; if (mf) blip(mf, cur.ms / 1000 * 1.7, cur.wave, cur.vol); }
+    step++;
+  }
+  window.hfpcBgmLevel = function (lv) { cur = variant(lv); step = 0; if (timer) { clearInterval(timer); timer = setInterval(tick, cur.ms); } };
+  function start() {
+    if (started || muted) return; started = true;
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+    cur = cur || variant(1);
+    timer = setInterval(tick, cur.ms);
+  }
+  addEventListener('pointerdown', function () { start(); try { if (ctx && ctx.state === 'suspended') ctx.resume(); } catch (e) {} }, { passive: true });
+  document.addEventListener('visibilitychange', function () { if (!ctx) return; try { document.hidden ? ctx.suspend() : ctx.resume(); } catch (e) {} });
+  // 🎵 靜音鈕(放「← 返回大廳」鈕下方,同一套視覺)
+  function addBtn() {
+    if (document.querySelector('[data-hfpc-bgm]')) return;
+    var b = document.createElement('button');
+    b.textContent = muted ? '🔇' : '🎵';
+    b.setAttribute('aria-label', '開關背景音樂');
+    b.setAttribute('data-hfpc-bgm', '1');
+    b.style.cssText = 'position:fixed;z-index:2147483000;' +
+      'top:calc(60px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));' +
+      'min-width:44px;min-height:44px;border:0;border-radius:12px;font-size:17px;' +
+      'background:rgba(0,0,0,.58);color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent';
+    b.addEventListener('click', function () {
+      muted = !muted;
+      try { localStorage.setItem('bgm-muted', muted ? '1' : '0'); } catch (e) {}
+      b.textContent = muted ? '🔇' : '🎵';
+      if (!muted) start();
+    });
+    (document.body || document.documentElement).appendChild(b);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addBtn); else addBtn();
+})();
+</script>
+</body>
 </html>

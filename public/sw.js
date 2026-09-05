@@ -3,7 +3,15 @@
 // 順手更新快取;離線時才退回快取。這樣改版不會被舊快取黏住。
 // 改版時把 CACHE 版本號 +1,舊快取會在啟用時自動清除。
 
-const CACHE = 'jonah-v12'
+// v7(2026-08-13)：🔊 補上預烤曉臻人聲(tts/)+ 修統計斷流。
+//   ★ 由來：本站 speak.js 是從 hfpc-paul-game 複製過來的,**帶了「mp3 優先」的邏輯、
+//     卻沒帶「烤 mp3」那一步** ⇒ tts/manifest.json 從上線起就 404
+//     ⇒ 六關經文全部用 Web Speech 機器聲唸(使用者 0730 明令禁止的那種)。
+//     零錯誤、零紅燈,只有真的按下朗讀鍵的人聽得出來。
+//   ★ mp3 進 CORE = 教室沒網路也有人聲(本站賣點就是安裝後馬上離線可玩)。
+// v21(2026-09-05):把 main(v7:曉臻人聲 / 分齡 / BGM / 打點修正)合進線上這條 feat/redsea(v20:四個戰爭關 + 版號徽章)。
+//   ★ 線上一直是 v20(0820 從 feat/redsea 部署),main 的打點修正躺在另一條分支 ⇒ 統計上「約拿零打點」一個月。
+const CACHE = 'jonah-v21'
 // 預快取「整個 app shell」(HTML + CSS + 全部 ES 模組 + 圖示),
 // 這樣「安裝後馬上離線」(教室沒網路)也能玩,不必先線上完整跑一輪。
 // 仍是 network-first(下方 fetch):線上一律拿最新並更新快取,離線才退回這份預快取。
@@ -21,12 +29,24 @@ const CORE = [
   '/src/spawner.js',
   '/src/storm.js',
   '/src/moses.js',
+  '/src/redsea.js',
   '/src/jehoshaphat.js',
   '/src/balaam.js',
   '/src/renderer.js',
   '/src/input.js',
   '/src/ui.js',
   '/src/audio.js',
+  '/src/speak.js',   // v21:main 合進來的三個模組(game.js 有 import)——不列就「安裝後馬上離線」載不到
+  '/src/age.js',
+  '/src/ttsFix.js',
+  // 🔊 預烤曉臻人聲（檔名=ttsKey 雜湊；哪一關對哪支見 scripts/verify-tts.mjs 的輸出）
+  '/tts/manifest.json',
+  '/tts/5e9d2065.mp3', // L1 約拿書 1:1–3
+  '/tts/dceb20c1.mp3', // L2 約拿書 1:4–16
+  '/tts/3c44ec03.mp3', // L3 約拿書 1:17–2:10
+  '/tts/572acf61.mp3', // L4 約拿書 2:10–3:3
+  '/tts/8b2b8e79.mp3', // L5 約拿書 3:4–10
+  '/tts/15ec2fe4.mp3', // L6 約拿書 4:1–11
   '/manifest.webmanifest',
   '/favicon.svg',
   '/icons/pwa-192x192.png',
@@ -87,3 +107,8 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(req))
   )
 })
+
+// 🏷️ 版號回報(0820 全艦隊批次):頁尾徽章問「實際執行中的版本」,答案=本 SW 的快取名。
+self.addEventListener('message', function (e) {
+  if (e && e.data === 'GET_VERSION' && e.source) e.source.postMessage({ type: 'SW_VERSION', v: CACHE });
+});

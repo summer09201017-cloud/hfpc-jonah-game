@@ -106,7 +106,7 @@ start-game.bat  一般使用者雙擊啟動(英文 + CRLF)
 - 🆕 **(2026-06-13)戰爭闖關系列開工**(動作關,暫住本 repo 做原型):
   - ✅ **#1 摩西舉手之戰**(出 17,`?level=moses`):`src/moses.js` 重用 storm 平衡引擎、level===7、
     config `MOSES`、scripture `MOSES`、renderer `_drawMoses`。操作=按住舉手、亞倫戶珥手垂時自動扶。
-  - 🔧 **#2 紅海奔逃**(出 14)WIP:設計稿 + config/scripture `REDSEA` 就緒,`redsea.js`(level 8)+ `_drawRedSea` 待寫。
+  - ✅ **#2 紅海奔逃**(出 14,`?level=redsea`):`src/redsea.js`(level===8,phase stand→cross→closing)重用跑酷的跳躍手感、config/scripture `REDSEA`、renderer `_drawRedSea`(兩道水牆+乾海床+礁石+法老戰車追兵+海合攏)。站住等候→海全開才衝→跳過礁石、追兵在後→到對岸海合攏淹追兵=過關;追兵追上=失敗。已加入嵌入白名單(level 8),供保羅「出埃及之旅 · 過紅海」站嵌入。驗證:`node scripts/_redsea-tune.mjs`(三道設計閘門)、`node scripts/_redsea-render-check.mjs`(headless 渲染+規則,361 幀 0 錯)、`npm run test:offline` 全綠。
   - ⚠ 戰爭關**別 push 到約拿 `main`**(會自動部署、把原型曝光);永久家=驗證後搬進保羅 repo。詳見 `讀我-HANDOFF.txt`。
 - 🆕 **(2026-06-14)逆轉奇兵兩動作關完成 + 畫面/手感升級**:
   - ✅ **#3 聖歌奇兵**(代下 20,`?level=jehoshaphat`)、**#4 反轉奇兵**(民 22,`?level=balaam`)：人物放大重繪 + 表情、反轉的驢重畫(長耳不像豬)+ 天使/巴蘭表情 + 泥石路加寬、聖歌標示「以色列 vs 敵軍」陣營旗標。
