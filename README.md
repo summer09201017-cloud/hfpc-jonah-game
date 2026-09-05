@@ -6,7 +6,7 @@
 
 > 🆕 **2026-06-14（在 `feat/balaam` 分支）**：暑假兒童營「逆轉奇兵」兩個動作關完成——
 > 🎵聖歌奇兵 `?level=jehoshaphat`、🫏反轉奇兵 `?level=balaam`：人物重繪+表情、各加 **3 條命（會輸）**、
-> 失敗清楚問「要再玩一次嗎?」。⚠ 這些原型**別 push 到 `main`**（會自動部署曝光）；詳見 `讀我-HANDOFF.txt`。
+> 失敗清楚問「要再玩一次嗎?」。（0905 起這些原型已合進 `main` 並上線;Netlify 自動建置已停,push 不再自動部署）；詳見 `讀我-HANDOFF.txt`。
 
 ## 怎麼執行
 
@@ -25,6 +25,10 @@ npm run dev      # 啟動 Vite dev server(通常是 http://localhost:5173/,被�
 npm run build    # = node scripts/bundle-static.mjs,輸出到 site/(不是 dist/,也不要用 vite build)
 ```
 
+- ⚠ **2026-09-05 起正版在 Cloudflare Workers**:https://hfpc-jonah-game.summer09201017.workers.dev(下一條的 Netlify 是歷史;該站 0905 已 `stop_builds`)。
+  部署 = `npm run build`(產 `site/`)→ `npx wrangler deploy --name hfpc-jonah-game --compatibility-date 2026-07-01 --assets site`,
+  再 `curl .../sw.js | grep CACHE` 看到新版號才算。源碼真相 = `main`(0905 把 v7 的 main 與線上 v20 的 `feat/redsea` 合回一條 v21;
+  之前兩條分岔三個月,main 的統計打點修正一直沒上線)。改 `src/` 記得同步 `public/sw.js` 的 CACHE 版號與 CORE 清單。
 - **已上線:https://hfpc-jonah-game.netlify.app/**(連 GitHub repo 自動部署,push 到 `main` 即重新部署)。`netlify.toml` 已設好(`command = npm run build`、`publish = site`)。
 - ⚠️ 不要用 `vite build`:這台機器的 Node 24 在遞迴 `cpSync`/`rmSync` 會讓行程無聲被殺。詳見 `CLAUDE.md`。
 
