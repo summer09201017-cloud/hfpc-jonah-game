@@ -77,6 +77,11 @@
 </script>
     <script>
       // play-stats 三層匿名計數(lobby-play-rank §3/§4):開啟 10 分去重;-start/-done 不去重;-done 帶 t=秒。零個資。
+      // 0907:同一份程式部署在兩個站 ⇒ key 依網域分開:hfpc-war-games.pages.dev(戰爭闖關原型站)→ 'war-games',其餘 → 'jonah'。
+      //       數字才不會合併(全艦隊健檢「共用 key」那條黃燈的同型病)。game.js 的 -done 讀 window.psId。
+      window.psId = /^hfpc-war-games\./.test(location.hostname) ? 'war-games' : 'jonah';
+      // 0907:自家 Playwright 體檢(navigator.webdriver)或帶 ?audit=1 的開頁不算玩家 —— 8 月中「開 25 次・完 0・停 3 秒」那批指紋的止血。
+      window.psBot = !!navigator.webdriver || /[?&]audit=1(&|$)/.test(location.search);
       window.psPing = function (key, t) {
         try {
           // 🔴 0813:原本是白名單 `if (!hostname.endsWith('netlify.app')) return;`——
@@ -84,18 +89,18 @@
           //   ⇒ 三層打點(-start/-done/-dwell)明明全做齊了,卻一筆都沒送出去,零錯誤零紅燈。
           //   (同型:大廳 07-22 遷 CF 後統計從 15 次/天掉到 1~2 次/天,躺了三週沒人發現。)
           // ★ 改用艦隊主流的黑名單:只擋本機開發,其餘一律放行 ⇒ 以後搬家不會再斷。
-          if (['localhost', '127.0.0.1'].includes(location.hostname)) return;
+          if (['localhost', '127.0.0.1'].includes(location.hostname) || window.psBot) return;
           var u = 'https://hfpc-play-stats.summer09201017.workers.dev/api/ping?g=' + key + (t ? '&t=' + t : '');
           if (navigator.sendBeacon) navigator.sendBeacon(u); else fetch(u, { mode: 'no-cors' });
         } catch (_) {}
       };
       try {
-        var psK = 'ps-last-jonah';
+        var psK = 'ps-last-' + window.psId;
         var psLast = parseInt(localStorage.getItem(psK) || '0', 10);
-        if (Date.now() - psLast > 600000) { localStorage.setItem(psK, String(Date.now())); window.psPing('jonah'); }
-      } catch (_) { window.psPing('jonah'); }
+        if (Date.now() - psLast > 600000) { localStorage.setItem(psK, String(Date.now())); window.psPing(window.psId); }
+      } catch (_) { window.psPing(window.psId); }
       var _dwT0=Date.now(),_dwSent=false;
-      function _dwLeave(){ if(_dwSent)return; _dwSent=true; var sec=Math.round((Date.now()-_dwT0)/1000); if(sec>=3&&sec<=1800) window.psPing('jonah-dwell',sec); }
+      function _dwLeave(){ if(_dwSent)return; _dwSent=true; var sec=Math.round((Date.now()-_dwT0)/1000); if(sec>=3&&sec<=1800) window.psPing(window.psId + '-dwell',sec); }
       addEventListener('visibilitychange',function(){ if(document.visibilityState==='hidden')_dwLeave(); });
       addEventListener('pagehide',_dwLeave);
     </script>

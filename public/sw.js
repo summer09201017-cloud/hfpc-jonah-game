@@ -11,7 +11,9 @@
 //   ★ mp3 進 CORE = 教室沒網路也有人聲(本站賣點就是安裝後馬上離線可玩)。
 // v21(2026-09-05):把 main(v7:曉臻人聲 / 分齡 / BGM / 打點修正)合進線上這條 feat/redsea(v20:四個戰爭關 + 版號徽章)。
 //   ★ 線上一直是 v20(0820 從 feat/redsea 部署),main 的打點修正躺在另一條分支 ⇒ 統計上「約拿零打點」一個月。
-const CACHE = 'jonah-v21'
+// v22(2026-09-07):統計 key 依網域分開(hfpc-war-games.pages.dev → 'war-games')+ 自家 Playwright 體檢不算玩家(navigator.webdriver / ?audit=1)。
+//   ★ 由來:全艦隊健檢發現戰爭闖關原型站零打點;同一份程式若直接部署上去會跟 'jonah' 共用 key,數字合併。
+const CACHE = 'jonah-v22'
 // 預快取「整個 app shell」(HTML + CSS + 全部 ES 模組 + 圖示),
 // 這樣「安裝後馬上離線」(教室沒網路)也能玩,不必先線上完整跑一輪。
 // 仍是 network-first(下方 fetch):線上一律拿最新並更新快取,離線才退回這份預快取。
